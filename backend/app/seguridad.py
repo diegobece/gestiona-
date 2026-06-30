@@ -154,10 +154,10 @@ def _cabeceras_seguridad(resp) -> None:
 
 _ESTILO_AUTH = """
  *{box-sizing:border-box}
- body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--bg);
+ body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--surface-1);
   margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--text)}
- .box{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-xl);
-  padding:32px;width:360px;box-shadow:var(--shadow-lg);margin:24px}
+ .box{background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-xl);
+  border-top:3px solid var(--accent);padding:32px;width:360px;box-shadow:var(--shadow-lg);margin:24px}
  .wm{text-align:center;margin-bottom:4px;line-height:1}
  .wm .g{font-family:Georgia,serif;font-weight:700;color:var(--accent);font-size:28px}
  .wm .m{font-family:'Segoe Script','Brush Script MT',cursive;color:var(--accent);font-size:29px;margin-left:3px;position:relative;top:4px}
