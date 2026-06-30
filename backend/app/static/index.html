@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gestiona más — Análisis contable</title>
+<link rel="stylesheet" href="/static/tokens.css"/>
+<link rel="stylesheet" href="/static/base.css"/>
+<style>
+  /* ── Hero ──────────────────────────────────────────────────── */
+  .hero { text-align: center; padding: var(--sp-10) var(--sp-4) var(--sp-6); }
+  .hero h2 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 var(--sp-3); color: var(--text-strong); font-weight: 700; }
+  .hero h2 .acc { color: var(--accent); }
+  .hero p { font-size: 1rem; color: var(--text-muted); max-width: 640px; margin: 0 auto; line-height: 1.6; }
+
+  /* ── Feature cards ─────────────────────────────────────────── */
+  .features { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin: var(--sp-6) 0 var(--sp-4); }
+  .feat { flex: 1; min-width: 220px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-5); box-shadow: var(--shadow-sm); transition: box-shadow var(--dur-base) var(--ease-out); }
+  .feat:hover { box-shadow: var(--shadow-md); }
+  .feat .ic { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-3); }
+  .feat h3 { margin: 0 0 var(--sp-2); font-size: 0.9375rem; color: var(--text-strong); }
+  .feat p { margin: 0; font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; }
+
+  /* ── Steps ──────────────────────────────────────────────────── */
+  .steps { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin: var(--sp-4) 0 var(--sp-6); }
+  .step { flex: 1; min-width: 200px; display: flex; gap: var(--sp-3); align-items: flex-start; }
+  .step .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.8125rem; }
+  .step h4 { margin: 0 0 var(--sp-1); font-size: 0.875rem; color: var(--text-strong); font-weight: 600; }
+  .step p { margin: 0; font-size: 0.8125rem; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── Upload area ───────────────────────────────────────────── */
+  .uploadwrap { max-width: 680px; margin: var(--sp-2) auto 0; }
+  .filebox { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; justify-content: center; padding: var(--sp-2); }
+  .filename { font-weight: 600; font-size: 0.9375rem; color: var(--text-strong); }
+  .filename .fic { color: var(--accent); margin-right: var(--sp-1); }
+
+  /* ── Movement table (inside detail panel) ──────────────────── */
+  .movs { font-size: 0.8125rem; }
+  .movs th { position: static; background: var(--surface-3); }
+  .movs td { padding: var(--sp-1) var(--sp-2); }
+  .debe  { color: #1D4ED8; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .haber { color: var(--danger); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ── Confidence label (text, under tag) ────────────────────── */
+  .conf { font-size: 0.6875rem; color: var(--text-faint); margin-top: 2px; }
+
+  /* ── Candidate invoice block ───────────────────────────────── */
+  .cand { border: 1px solid var(--border); background: var(--surface-2); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 var(--sp-3); }
+  .cand h5 { margin: 0 0 var(--sp-2); font-size: 0.8125rem; color: var(--success); font-weight: 600; }
+  .candrow { font-size: 0.8125rem; padding: var(--sp-2) 0; border-top: 1px solid var(--border); }
+  .candrow:first-of-type { border-top: none; }
+  .arrow { color: var(--success); font-weight: 700; margin: 0 var(--sp-2); }
+  .candev { color: var(--text-muted); font-size: 0.75rem; margin-top: var(--sp-1); }
+  .nocand { font-size: 0.75rem; color: var(--text-faint); font-style: italic; margin: var(--sp-1) 0 var(--sp-3); }
+  .senales { margin-top: var(--sp-2); display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+  .canddet { min-height: 30px; }
+
+  /* ── Payment selector chips ────────────────────────────────── */
+  .pgchips { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0 var(--sp-2); }
+  .pgbtn { font: inherit; font-size: 0.8125rem; border: 1px solid var(--border); background: var(--surface-1); border-radius: 100px; padding: var(--sp-1) var(--sp-3); cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+  .pgbtn:hover { background: var(--surface-2); }
+  .pgbtn.sel { background: #DCFCE7; border-color: var(--success); box-shadow: 0 0 0 2px rgba(22,163,74,.18); color: #166534; }
+  .pgbtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  /* ── Suggested action panel ────────────────────────────────── */
+  .accion { font-size: 0.8125rem; color: #78350F; background: #FFFBEB; border: 1px solid #FCD34D; border-left: 3px solid var(--warning); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); margin: var(--sp-2) 0 var(--sp-3); }
+
+  /* ── Dark mode page-specific overrides ─────────────────────── */
+  @media (prefers-color-scheme: dark) {
+    .debe { color: #93C5FD; }
+    .cand h5 { color: #86EFAC; }
+    .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
+    .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="/static/logo.png" alt="Gestiona más" class="logo-img"
+         onerror="this.style.display='none';document.getElementById('wm').style.display='flex'"/>
+    <span id="wm" class="wordmark" style="display:none"><span class="g">Gestiona</span><span class="m">más</span></span>
+  </div>
+  <nav class="topbar-nav">
+    <a class="nav-tab active" href="/">Análisis contable</a>
+    <a class="nav-tab" href="/conciliacion">Conciliación Presupuestaria</a>
+  </nav>
+  <div class="topbar-actions">
+    <a class="hdr-link" href="/logout">Salir</a>
+  </div>
+</header>
+<main>
+  <!-- Landing (se oculta al mostrar resultados) -->
+  <div id="landing">
+    <section class="hero">
+      <h2>Análisis contable <span class="acc">preciso y auditable</span></h2>
+      <p>Sube tu Libro Mayor y detecta pagos sin factura y facturas sin pago con un motor
+         determinista y auditable. Afirma solo lo que puede probar; lo dudoso, a revisión humana.</p>
+    </section>
+
+    <section class="features">
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.2a3.6 3.6 0 0 0-3-1.4 3.6 3.6 0 0 0 0 8.4 3.6 3.6 0 0 0 3-1.4"/><path d="M7.5 11h6M7.5 13.5h5"/></svg></div><h3>Pagos sin factura</h3>
+        <p>Pagos a proveedores sin una factura que los respalde, con su evidencia y nivel de confianza.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg></div><h3>Facturas sin pago</h3>
+        <p>El análisis inverso: facturas pendientes de pago, ordenadas por antigüedad.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="10"/></svg></div><h3>Informes profesionales</h3>
+        <p>Exporta a Excel (auditable) y a un PDF de cliente con tu marca; tú decides qué incluir.</p></div>
+    </section>
+
+    <section class="steps">
+      <div class="step"><div class="n">1</div><div><h4>Sube el Libro Mayor</h4><p>Excel (.xlsx) — fuente autoritativa. PDF solo como apoyo.</p></div></div>
+      <div class="step"><div class="n">2</div><div><h4>Confirma e inicia el análisis</h4><p>Revisas el archivo y pulsas «Iniciar análisis».</p></div></div>
+      <div class="step"><div class="n">3</div><div><h4>Revisa, decide y exporta</h4><p>Confirmas cada caso y generas el informe del cliente.</p></div></div>
+    </section>
+  </div>
+
+  <div class="uploadwrap" id="cargar">
+    <div class="card">
+      <div id="drop" class="drop">
+        <div class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg></div>
+        <div class="big">Sube el Libro Mayor (Fichas de Mayor)</div>
+        <span class="muted">Arrastra aquí tu archivo o haz clic · Excel (.xlsx) o PDF</span>
+        <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.pdf" class="hidden"/>
+      </div>
+      <div id="confirmar" class="hidden" style="margin-top:14px">
+        <div class="filebox">
+          <span class="filename"><span id="fname"></span></span>
+          <button class="btn-ghost" onclick="cambiarArchivo()">Cambiar archivo</button>
+          <button class="btn-primary" onclick="iniciarAnalisis()">Iniciar análisis</button>
+        </div>
+      </div>
+      <div id="status" class="muted" style="margin-top:10px;text-align:center"></div>
+    </div>
+  </div>
+
+  <div id="result" class="hidden">
+    <div class="tabs">
+      <button class="tab active" id="tabPagos" onclick="switchTab('pagos')">Pagos sin factura</button>
+      <button class="tab" id="tabFsp" onclick="switchTab('facturas')">Facturas sin pago</button>
+    </div>
+
+    <div id="viewPagos">
+    <div id="banners"></div>
+
+    <div class="card">
+      <div class="summary" id="kpis"></div>
+    </div>
+
+    <div class="card" id="revcard">
+      <div class="card-hd">
+        <strong>¿Por qué una cuenta cae en REVISAR?</strong>
+        <span class="muted">de menor a mayor sospecha · ninguna se afirma</span>
+      </div>
+      <div id="revbreak" class="revbreak"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <strong>Cuentas analizadas</strong>
+        <div class="exports">
+          <a id="xlsx" class="btn" href="#" title="Detalle completo y auditable (todas las cuentas y movimientos)">⬇ Excel</a>
+          <a id="pdf" class="btn" href="#" title="Informe del cliente: solo los pagos sin factura marcados como «En informe»">⬇ PDF cliente</a>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Código</th><th>Cuenta</th><th>Clasificación</th>
+          <th class="right">Σ Debe</th><th class="right">Σ Haber</th>
+          <th class="right">€ sospechoso</th><th>Fact/Pag</th><th>Confirmación</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    </div><!-- /viewPagos -->
+
+    <div id="viewFacturas" class="hidden">
+      <div id="bannersF"></div>
+      <div class="card"><div class="summary" id="kpisF"></div></div>
+      <div class="card" id="agingcard">
+        <div class="card-hd">
+          <strong>Antigüedad de las facturas sin pago</strong>
+          <span class="muted">a más antigüedad, más relevante</span>
+        </div>
+        <div id="agingbreak" class="revbreak"></div>
+      </div>
+      <div class="card" id="revcardF" style="display:none">
+        <div class="card-hd">
+          <strong>¿Por qué quedan facturas a revisar?</strong>
+          <span class="muted">infrapagos · de menor a mayor relevancia</span>
+        </div>
+        <div id="revbreakF" class="revbreak"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <strong>Cuentas analizadas</strong>
+          <div class="exports">
+            <a id="pdfF" class="btn" href="#" title="Informe del cliente: facturas sin pago + las infrapagadas que añadas al revisarlas">⬇ PDF cliente</a>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Código</th><th>Cuenta</th><th>Clasificación</th>
+            <th class="right">Σ Debe</th><th class="right">Σ Haber</th>
+            <th class="right">Pendiente</th><th>Fact/Pag</th><th>Confirmación</th>
+          </tr></thead>
+          <tbody id="tbodyF"></tbody>
+        </table>
+      </div>
+    </div><!-- /viewFacturas -->
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let HUELLA = null;
+
+const EUR = s => Number(s).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+const ORDEN = {SIN_FACTURA_ALTA_CONFIANZA:0, REVISAR:1, NO_FIABLE:2, CONCILIADA:3, EXCLUIDA:4};
+
+const drop = $('#drop'), file = $('#file');
+drop.onclick = () => file.click();
+drop.ondragover = e => {e.preventDefault(); drop.style.background='#fdf4f5';};
+drop.ondragleave = () => drop.style.background='';
+drop.ondrop = e => {e.preventDefault(); drop.style.background=''; if(e.dataTransfer.files[0]) seleccionar(e.dataTransfer.files[0]);};
+file.onchange = () => file.files[0] && seleccionar(file.files[0]);
+
+// Tras elegir archivo NO se analiza: se pide confirmación con un botón.
+function seleccionar(f){
+  window._pendingFile = f;
+  $('#fname').textContent = f.name;
+  $('#confirmar').classList.remove('hidden');
+  $('#status').textContent = '';
+}
+function cambiarArchivo(){
+  window._pendingFile = null;
+  $('#file').value = '';
+  $('#confirmar').classList.add('hidden');
+  $('#status').textContent = '';
+}
+function iniciarAnalisis(){
+  if(window._pendingFile) subir(window._pendingFile);
+}
+
+async function subir(f){
+  $('#confirmar').classList.add('hidden');
+  $('#status').textContent = 'Analizando ' + f.name + '…';
+  $('#result').classList.add('hidden');
+  const fd = new FormData(); fd.append('file', f);
+  const r = await fetch('/api/analizar', {method:'POST', body:fd});
+  if(!r.ok){ const e = await r.json().catch(()=>({detail:r.statusText})); $('#status').textContent = (e.detail||'Error al procesar el archivo'); return; }
+  render(await r.json());
+  $('#status').textContent = '';
+}
+
+function render(data){
+  HUELLA = data.huella;
+  window._dataF = null;            // se recarga al abrir la pestaña de facturas
+  setTabUI('pagos');
+  $('#landing').classList.add('hidden');   // centramos la atención en los resultados
+  $('#result').classList.remove('hidden');
+  $('#xlsx').href = `/api/informe/${HUELLA}/export.xlsx`;
+  $('#pdf').href  = `/api/informe/${HUELLA}/export.pdf`;
+
+  // Banners
+  const FLAG = {
+    INFORME_SOBRE_PDF_DATOS_DEGRADADOS:'Trabajado sobre PDF: datos degradados. Sube el Excel para máxima fiabilidad.',
+    SIN_SALDO_APERTURA:'Sin saldo de apertura en el fichero: algunos pagos podrían liquidar facturas de un ejercicio anterior.'
+  };
+  const s = data.resumen;
+  let bannersHTML = (data.flags_globales||[]).map(f=>`<div class="banner warn">${FLAG[f]||f}</div>`).join('')
+    + (data.advertencias_parseo||[]).map(a=>`<div class="banner warn">${a}</div>`).join('');
+  // Banner informativo de alcance (no es alarma): cuentas que no son proveedor/acreedor.
+  const fda = data.fuera_de_alcance||[];
+  if(s.n_fuera_alcance>0){
+    const detalle = fda.map(b=>`${b.n} ${b.grupo}`).join(' · ');
+    bannersHTML += `<div class="banner info">Se analizaron <strong>${s.n_en_alcance} cuentas de proveedor/acreedor</strong>. Otras <strong>${s.n_fuera_alcance}</strong> del fichero están <strong>fuera de alcance</strong> y no se analizan (no son pagos a proveedores): ${detalle}.</div>`;
+  }
+  $('#banners').innerHTML = bannersHTML;
+
+  // KPIs (siempre referidos a las cuentas EN ALCANCE)
+  $('#kpis').innerHTML = `
+    <div class="kpi k-rojo"><h3>Pagos SIN factura (alta confianza)</h3><div class="n">${s.n_sin_factura}</div><div class="e">${EUR(s.importe_sin_factura)}</div></div>
+    <div class="kpi k-ambar"><h3>En revisión</h3><div class="n">${s.n_revisar}</div><div class="e">${EUR(s.importe_revisar)}</div></div>
+    <div class="kpi k-verde"><h3>Conciliadas</h3><div class="n">${s.n_conciliadas}</div><div class="e">&nbsp;</div></div>
+    <div class="kpi k-gris"><h3>No fiables / Técnicas</h3><div class="n">${s.n_no_fiables} / ${s.n_excluidas}</div><div class="e">${s.n_en_alcance} cuentas en alcance</div></div>`;
+
+  // Desglose de REVISAR por sub-casilla (de menor a mayor sospecha)
+  const subs = data.revisar_subcategorias || [];
+  const SUSP = {FACTURA_EN_OTRA_CUENTA:'#1e8449',CREDITO_NO_IDENTIFICADO:'#b9770e',DISTORSION_POR_ABONO:'#9b8b00',ARRASTRE_EJERCICIO_ANTERIOR:'#1e8449',DESFASE_DE_CORTE:'#b9770e',SOBREPAGO_REVISAR:'#c0392b'};
+  $('#revcard').style.display = subs.length ? '' : 'none';
+  $('#revbreak').innerHTML = subs.map(b=>`
+    <div class="revbox" data-sub="${b.subcategoria}" onclick="filtrarSub('${b.subcategoria}')">
+      <h4><span class="susp" style="background:${SUSP[b.subcategoria]||'#999'}"></span>${b.etiqueta}</h4>
+      <div class="rn">${b.n}</div><div class="re">${EUR(b.importe)}</div>
+      <div class="ra">${b.accion}</div>
+    </div>`).join('');
+
+  // Tabla: solo cuentas EN ALCANCE (las fuera de alcance se resumen en el banner).
+  window._cuentas = [...data.cuentas]
+    .filter(c => c.clasificacion!=='FUERA_DE_ALCANCE')
+    .sort((a,b)=> (ORDEN[a.clasificacion]-ORDEN[b.clasificacion]) || (Number(b.importe_sospechoso)-Number(a.importe_sospechoso)));
+  window._filtroSub = null;
+  pintarTabla();
+}
+
+function pintarTabla(){
+  const cs = window._cuentas.filter(c => !window._filtroSub || c.subcategoria===window._filtroSub);
+  $('#tbody').innerHTML = cs.map((c,i)=>fila(c,i)).join('');
+}
+
+function filtrarSub(sub){
+  window._filtroSub = (window._filtroSub===sub) ? null : sub;
+  document.querySelectorAll('.revbox').forEach(b=>b.classList.toggle('sel', b.dataset.sub===window._filtroSub));
+  pintarTabla();
+}
+
+function fila(c, i){
+  const flags = (c.flags||[]).map(f=>`<span class="flagchip">${f}</span>`).join('');
+  const conf = c.confianza!=='NA' ? `<div class="conf">conf. ${c.confianza}</div>` : '';
+  const ov = c.override ? `<span class="ov-set">✓ ${c.override.veredicto}</span>` : '';
+  const movs = c.movimientos.map(m=>`
+    <tr>
+      <td>${m.fecha||''}</td><td>${m.asiento}</td><td>${m.tipo}</td>
+      <td>${m.comentario}</td>
+      <td class="right debe">${Number(m.debe)?EUR(m.debe):''}</td>
+      <td class="right haber">${Number(m.haber)?EUR(m.haber):''}</td>
+      <td>${m.referencias.su_factura||m.referencias.factura||''}</td>
+    </tr>`).join('');
+  const subchip = c.subcategoria_etiqueta ? `<div class="subtag" title="${c.subcategoria_motivo||''}">${c.subcategoria_etiqueta}</div>` : '';
+  const vistog = visToggle(c);
+  const accion = c.subcategoria_accion ? `<div class="accion"><strong>Acción sugerida:</strong> ${c.subcategoria_accion}${c.subcategoria_motivo?'<br><span class="muted">'+c.subcategoria_motivo+'</span>':''}</div>` : '';
+  const cand = candidatosHTML(c);
+  return `
+  <tr class="row" onclick="toggle(${i})">
+    <td>${c.codigo_cuenta}</td>
+    <td>${c.nombre_cuenta}</td>
+    <td><span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>${conf}${subchip}<div>${flags}</div>${vistog}</td>
+    <td class="right">${EUR(c.suma_debe)}</td>
+    <td class="right">${EUR(c.suma_haber)}</td>
+    <td class="right"><strong>${Number(c.importe_sospechoso)?EUR(c.importe_sospechoso):'—'}</strong></td>
+    <td>${c.num_facturas}/${c.num_pagos}</td>
+    <td onclick="event.stopPropagation()">${ov || acciones(c)}</td>
+  </tr>
+  <tr class="detail hidden" id="d${i}"><td colspan="8"><div class="inner">
+    <p class="motivo">${c.motivo}</p>
+    ${accion}
+    ${cand}
+    <table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${movs}</tbody></table>
+    ${overrideBar(c)}
+  </div></td></tr>`;
+}
+
+const CONF_LABEL = {ALTA:'ALTA', MEDIA:'MEDIA', BAJA:'POSIBLE'};
+
+function candDetailHTML(cd, p){
+  if(!cd) return `<div class="nocand">Sin factura candidata clara para este pago de ${EUR(p.debe)} (revisar manualmente).</div>`;
+  const ref = cd.factura_ref ? ` · ref <code>${cd.factura_ref}</code>` : '';
+  const fuente = cd.fuente ? ` <span class="muted">· ${cd.fuente}</span>` : '';
+  const desf = cd.dias_desfase==null ? '' : ` · factura ${cd.dias_desfase>=0?cd.dias_desfase+' día(s) antes':Math.abs(cd.dias_desfase)+' día(s) después'}`;
+  return `<div class="candrow">
+    <strong>Pago ${EUR(cd.pago_importe)}</strong> <span class="muted">(${cd.pago_fecha||''})</span>
+    <span class="arrow">→</span>
+    <strong>${EUR(cd.factura_importe)}</strong> en ${cd.factura_cuenta} ${cd.factura_nombre} <span class="muted">(${cd.factura_fecha||''})</span>${ref}
+    <span class="badge b-${cd.confianza}">${CONF_LABEL[cd.confianza]||cd.confianza}</span>${fuente}
+    <div class="candev">${cd.motivo}${desf}</div>
+    ${(cd.senales&&cd.senales.length)?`<div class="senales">${cd.senales.map(s=>`<span class="senal">${s}</span>`).join('')}</div>`:''}
+  </div>`;
+}
+
+function candidatosHTML(c){
+  if(c.subcategoria!=='FACTURA_EN_OTRA_CUENTA') return '';
+  const pagos = (c.movimientos||[]).filter(m=>m.tipo==='PAGO');
+  if(!pagos.length) return '';
+  const cod = c.codigo_cuenta;
+  const candDe = o => (c.candidatos||[]).find(x=>x.pago_orden===o);
+  const chips = pagos.map((p,j)=>{
+    const cd = candDe(p.orden);
+    const badge = cd ? `<span class="badge b-${cd.confianza}">${CONF_LABEL[cd.confianza]||cd.confianza}</span>`
+                     : `<span class="badge nomatch">sin candidata</span>`;
+    return `<button class="pgbtn ${j===0?'sel':''}" onclick="selPago('${cod}',${p.orden},this)">Pago ${EUR(p.debe)} <span class="muted">${p.fecha||''}</span> ${badge}</button>`;
+  }).join('');
+  const ayuda = pagos.length>1 ? ' — elige un pago para ver su factura sugerida' : '';
+  const inicial = candDetailHTML(candDe(pagos[0].orden), pagos[0]);
+  return `<div class="cand">
+    <h5>Factura candidata${ayuda} <span class="muted" style="font-weight:400">(sugerencia para revisión, no es afirmación)</span></h5>
+    <div class="pgchips">${chips}</div>
+    <div class="canddet" id="canddet-${cod}">${inicial}</div>
+  </div>`;
+}
+
+function selPago(cod, orden, btn){
+  const c = window._cuentas.find(x=>x.codigo_cuenta===cod);
+  const cd = (c.candidatos||[]).find(x=>x.pago_orden===orden);
+  const p = (c.movimientos||[]).find(m=>m.orden===orden);
+  btn.parentNode.querySelectorAll('.pgbtn').forEach(b=>b.classList.toggle('sel', b===btn));
+  document.getElementById('canddet-'+cod).innerHTML = candDetailHTML(cd, p);
+}
+
+function visToggle(c){
+  if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA') return '';
+  const on = c.mostrar!==false;
+  return `<button class="vistog ${on?'on':'off'}" title="Decide si este pago sin factura aparece en el informe PDF del cliente" onclick="setVis(event,'${c.codigo_cuenta}',${!on})">${on?'✓ En informe':'✗ Oculto del informe'}</button>`;
+}
+
+async function setVis(ev, cod, mostrar){
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  const r = await fetch(`/api/informe/${HUELLA}/cuenta/${cod}/visibilidad`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({mostrar})
+  });
+  if(!r.ok) return;
+  const c = window._cuentas.find(x=>x.codigo_cuenta===cod);
+  if(c) c.mostrar = mostrar;
+  btn.outerHTML = visToggle(c);
+}
+
+function acciones(c){
+  if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA' && c.clasificacion!=='REVISAR') return '<span class="muted">—</span>';
+  return `<button onclick="toggleFromCell(this)">Revisar ▾</button>`;
+}
+
+function overrideBar(c){
+  if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA' && c.clasificacion!=='REVISAR') return '';
+  return `<div class="ovbar">
+    <span class="muted">Confirmación del humano:</span>
+    <button class="primary" onclick="ovset('${c.codigo_cuenta}','SIN_FACTURA',this)">Sí, sin factura</button>
+    <button onclick="ovset('${c.codigo_cuenta}','EN_OTRA_CUENTA',this)">Está en otra cuenta</button>
+    <button onclick="ovset('${c.codigo_cuenta}','EJERCICIO_ANTERIOR',this)">Es de 2025</button>
+    <span id="ovmsg-${c.codigo_cuenta}" class="ov-set"></span>
+  </div>`;
+}
+
+function toggle(i){ $('#d'+i).classList.toggle('hidden'); }
+function toggleFromCell(btn){ const tr = btn.closest('tr'); const idx = [...tr.parentNode.children].indexOf(tr); tr.parentNode.children[idx+1].classList.toggle('hidden'); }
+
+async function ovset(codigo, veredicto, btn){
+  const r = await fetch(`/api/informe/${HUELLA}/cuenta/${codigo}/override`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({veredicto, autor:'usuario'})
+  });
+  const msg = $('#ovmsg-'+codigo);
+  if(r.ok){ msg.textContent = '✓ guardado: '+veredicto; }
+  else { msg.textContent = 'Error al guardar'; }
+}
+
+// ===================== Pestaña: Facturas sin pago =========================
+function setTabUI(tab){
+  $('#tabPagos').classList.toggle('active', tab==='pagos');
+  $('#tabFsp').classList.toggle('active', tab==='facturas');
+  $('#viewPagos').classList.toggle('hidden', tab!=='pagos');
+  $('#viewFacturas').classList.toggle('hidden', tab!=='facturas');
+}
+
+async function switchTab(tab){
+  setTabUI(tab);
+  if(tab==='facturas' && !window._dataF){
+    $('#tbodyF').innerHTML = '<tr><td colspan="8" class="muted" style="padding:14px">Analizando facturas sin pago…</td></tr>';
+    const r = await fetch(`/api/informe/${HUELLA}/facturas`);
+    if(r.ok){ window._dataF = await r.json(); renderFacturas(window._dataF); }
+    else { $('#tbodyF').innerHTML = '<tr><td colspan="8">Error al cargar</td></tr>'; }
+  }
+}
+
+const FLAGF = {
+  INFORME_SOBRE_PDF_DATOS_DEGRADADOS:'Trabajado sobre PDF: datos degradados. Sube el Excel para máxima fiabilidad.',
+  SIN_SALDO_APERTURA:'Sin saldo de apertura: un pago posterior al corte podría no estar en el fichero.'
+};
+const AGINGCOL = {'0–30 días':'#1e8449','31–60 días':'#b9770e','61–90 días':'#c0392b','+90 días':'#7a1f1f'};
+const ORDENF = {FACTURA_SIN_PAGO:0, REVISAR:1, NO_FIABLE:2, CONCILIADA:3, EXCLUIDA:4, FUERA_DE_ALCANCE:5};
+
+function renderFacturas(d){
+  $('#pdfF').href = `/api/informe/${HUELLA}/facturas/export.pdf`;
+  const s = d.resumen;
+  let b = (d.flags_globales||[]).map(f=>`<div class="banner warn">${FLAGF[f]||f}</div>`).join('');
+  if(s.n_fuera_alcance>0)
+    b += `<div class="banner info">Se analizaron <strong>${s.n_en_alcance} cuentas de proveedor/acreedor</strong>. Otras <strong>${s.n_fuera_alcance}</strong> están fuera de alcance y no se analizan.</div>`;
+  b += `<div class="banner info">Una factura sin pagar suele ser <strong>deuda viva normal</strong>; la <strong>antigüedad</strong> indica cuáles merecen atención.</div>`;
+  $('#bannersF').innerHTML = b;
+
+  $('#kpisF').innerHTML = `
+    <div class="kpi k-rojo"><h3>Facturas sin pago (sin ningún pago)</h3><div class="n">${s.n_facturas_sin_pago}</div><div class="e">${EUR(s.importe_facturas_sin_pago)}</div></div>
+    <div class="kpi k-ambar"><h3>Infrapagadas (en revisión)</h3><div class="n">${s.n_revisar}</div><div class="e">${EUR(s.importe_revisar)} pendiente</div></div>
+    <div class="kpi k-verde"><h3>Conciliadas (pagadas)</h3><div class="n">${s.n_conciliadas}</div><div class="e">&nbsp;</div></div>
+    <div class="kpi k-gris"><h3>Pendiente total de pago</h3><div class="n" style="font-size:21px">${EUR(s.importe_pendiente_total)}</div><div class="e">${s.n_en_alcance} cuentas en alcance</div></div>`;
+
+  const aging = d.aging||[];
+  $('#agingcard').style.display = aging.length ? '' : 'none';
+  $('#agingbreak').innerHTML = aging.map(a=>`
+    <div class="revbox" style="border-left-color:${AGINGCOL[a.tramo]||'#999'}">
+      <h4><span class="susp" style="background:${AGINGCOL[a.tramo]||'#999'}"></span>${a.tramo}</h4>
+      <div class="rn">${a.n}</div><div class="re">${EUR(a.importe)}</div>
+      <div class="ra">facturas sin pagar</div>
+    </div>`).join('');
+
+  const revs = d.revisar_subcategorias||[];
+  const RSC = {DESFASE_DE_CORTE:'#b9770e', DISTORSION_POR_ABONO:'#9b8b00', PAGO_PARCIAL:'#b9770e', DEUDA_ANTIGUA:'#c0392b'};
+  $('#revcardF').style.display = revs.length ? '' : 'none';
+  $('#revbreakF').innerHTML = revs.map(b=>`
+    <div class="revbox" style="border-left-color:${RSC[b.subcategoria]||'#999'}">
+      <h4><span class="susp" style="background:${RSC[b.subcategoria]||'#999'}"></span>${b.etiqueta}</h4>
+      <div class="rn">${b.n}</div><div class="re">${EUR(b.importe)} pendiente</div>
+      <div class="ra">${b.accion}</div>
+    </div>`).join('');
+
+  window._cuentasF = [...d.cuentas]
+    .filter(c=>c.clasificacion!=='FUERA_DE_ALCANCE')
+    .sort((a,b)=> (ORDENF[a.clasificacion]-ORDENF[b.clasificacion]) || (Number(b.importe_pendiente)-Number(a.importe_pendiente)));
+  $('#tbodyF').innerHTML = window._cuentasF.map((c,i)=>filaFactura(c,i)).join('');
+}
+
+function filaFactura(c, i){
+  const flags = (c.flags||[]).map(f=>`<span class="flagchip">${f}</span>`).join('');
+  const vistog = visToggleF(c);
+  const subchip = c.subcategoria_etiqueta ? `<div class="subtag" title="${c.subcategoria_motivo||''}">${c.subcategoria_etiqueta}</div>` : '';
+  const accion = c.subcategoria_accion ? `<div class="accion"><strong>Razón a revisar:</strong> ${c.subcategoria_accion}${c.subcategoria_motivo?'<br><span class="muted">'+c.subcategoria_motivo+'</span>':''}</div>` : '';
+  const facts = (c.facturas||[]).map(f=>{
+    const antig = f.antiguedad_dias==null ? '—' : `${f.vencida?'<span class="badge b-MEDIA" style="background:#c0392b">vencida</span> ':''}${f.antiguedad_dias} d <span class="muted">(${f.tramo})</span>`;
+    return `<tr>
+      <td>${f.fecha||''}</td><td>${f.vencimiento||'—'}</td><td>${antig}</td>
+      <td>${f.referencia||''}</td>
+      <td class="right haber">${EUR(f.importe)}</td></tr>`;
+  }).join('');
+  const notaParcial = c.clasificacion==='REVISAR'
+    ? `<p class="nocand">Pago parcial: estas son <strong>todas</strong> las facturas de la cuenta; el pendiente neto es ${EUR(c.importe_pendiente)}. No se puede precisar cuáles quedan sin pagar (emparejamiento fino = v2).</p>` : '';
+  const detalle = (c.facturas&&c.facturas.length)
+    ? `${notaParcial}<table class="movs"><thead><tr><th>Fecha</th><th>Vencim.</th><th>Antigüedad</th><th>Referencia</th><th class="right">Importe</th></tr></thead><tbody>${facts}</tbody></table>`
+    : `<p class="nocand">—</p>`;
+  return `
+  <tr class="row" onclick="toggleF(${i})">
+    <td>${c.codigo_cuenta}</td>
+    <td>${c.nombre_cuenta}</td>
+    <td><span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>${subchip}<div>${flags}</div>${vistog}</td>
+    <td class="right">${EUR(c.suma_debe)}</td>
+    <td class="right">${EUR(c.suma_haber)}</td>
+    <td class="right"><strong>${Number(c.importe_pendiente)?EUR(c.importe_pendiente):'—'}</strong></td>
+    <td>${c.num_facturas}/${c.num_pagos}</td>
+    <td><span class="muted">—</span></td>
+  </tr>
+  <tr class="detail hidden" id="df${i}"><td colspan="8"><div class="inner">
+    <p class="motivo">${c.motivo}</p>
+    ${accion}
+    ${detalle}
+  </div></td></tr>`;
+}
+
+function toggleF(i){ $('#df'+i).classList.toggle('hidden'); }
+
+function visToggleF(c){
+  if(c.clasificacion==='FACTURA_SIN_PAGO'){
+    const on = c.mostrar!==false;
+    return `<button class="vistog ${on?'on':'off'}" title="¿Incluir esta cuenta en el informe PDF de facturas sin pago?" onclick="setVisF(event,'${c.codigo_cuenta}',${!on})">${on?'✓ En informe':'✗ Oculto del informe'}</button>`;
+  }
+  if(c.clasificacion==='REVISAR'){
+    const on = c.mostrar===true;
+    return `<button class="vistog ${on?'on':'off'}" title="Añade esta cuenta infrapagada al PDF si confirmas que son facturas sin pagar" onclick="setVisF(event,'${c.codigo_cuenta}',${!on})">${on?'✓ Añadida al informe':'+ Añadir al informe'}</button>`;
+  }
+  return '';
+}
+
+async function setVisF(ev, cod, mostrar){
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  const r = await fetch(`/api/informe/${HUELLA}/factura/${cod}/visibilidad`,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mostrar})
+  });
+  if(!r.ok) return;
+  const c = window._cuentasF.find(x=>x.codigo_cuenta===cod);
+  if(c) c.mostrar = mostrar;
+  btn.outerHTML = visToggleF(c);
+}
+</script>
+</body>
+</html>

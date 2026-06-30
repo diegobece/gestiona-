@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gestiona más — Conciliación Presupuestaria</title>
+<link rel="stylesheet" href="/static/tokens.css"/>
+<link rel="stylesheet" href="/static/base.css"/>
+<style>
+  /* ── Page-specific: conciliacion.html ─────────────────────── */
+
+  main { max-width: 1400px; }
+
+  /* ── Upload form ───────────────────────────────────────────── */
+  .up { display: flex; gap: var(--sp-5); flex-wrap: wrap; align-items: flex-end; }
+  .up label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--sp-1); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  input[type=file] { font: inherit; font-size: 0.8125rem; color: var(--text); }
+  input[type=text], input[type=number] { font: inherit; padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); width: 90px; background: var(--surface-1); color: var(--text); transition: border-color var(--dur-fast) var(--ease-out); }
+  input[type=text]:focus, input[type=number]:focus { outline: 2px solid var(--ring); outline-offset: 0; border-color: var(--accent); }
+  select { font: inherit; font-size: 0.8125rem; border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-1) var(--sp-2); background: var(--surface-1); color: var(--text); }
+  .chk { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: var(--sp-1); }
+
+  /* Primary button (overrides a.btn ghost style; applies to button.btn element) */
+  button.btn {
+    font: inherit;
+    font-weight: 600;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--r-md);
+    padding: var(--sp-2) var(--sp-5);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  button.btn:hover { background: var(--accent-hover); }
+  button.btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  /* ── Two-column results grid ────────────────────────────────── */
+  .zonas { display: grid; grid-template-columns: 1.45fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 1000px) { .zonas { grid-template-columns: 1fr; } }
+  .scroll { max-height: 520px; overflow: auto; }
+  .scroll th { top: 0; }
+
+  /* ── Budget hierarchy levels ────────────────────────────────── */
+  .lv-topsheet { font-weight: 700; color: var(--text-strong); }
+  .lv-account  { font-weight: 600; }
+  .lv-detail   { padding-left: var(--sp-4); color: var(--text-muted); }
+
+  /* ── Confidence dot (budget line assignment) ────────────────── */
+  .conf { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: var(--sp-1); vertical-align: middle; }
+  .c-alta  { background: var(--success); }
+  .c-media { background: var(--warning); }
+  .c-baja  { background: var(--danger); }
+
+  /* ── Anomaly rows ───────────────────────────────────────────── */
+  .an { font-size: 0.8125rem; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); margin: var(--sp-1) 0; border: 1px solid; border-left-width: 3px; }
+  .s-critical { background: #FEF2F2; border-color: #FECACA; color: #7F1D1D; }
+  .s-warning  { background: #FFFBEB; border-color: #FCD34D; color: #78350F; }
+  .s-info     { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+
+  /* ── Filter reset link ──────────────────────────────────────── */
+  .filtro { font-size: 0.8125rem; color: var(--accent); cursor: pointer; font-weight: 500; }
+
+  /* ── Dark mode overrides ────────────────────────────────────── */
+  @media (prefers-color-scheme: dark) {
+    input[type=text], input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+    select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+    .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
+    .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
+    .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="/static/logo.png" alt="Gestiona más" class="logo-img"
+         onerror="this.style.display='none';document.getElementById('wm').style.display='flex'"/>
+    <span id="wm" class="wordmark" style="display:none"><span class="g">Gestiona</span><span class="m">más</span></span>
+  </div>
+  <nav class="topbar-nav">
+    <a class="nav-tab" href="/">Análisis contable</a>
+    <a class="nav-tab active" href="/conciliacion">Conciliación Presupuestaria</a>
+  </nav>
+  <div class="topbar-actions">
+    <a class="hdr-link" href="/logout">Salir</a>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <div class="up">
+      <div><label>Presupuesto (Movie Magic)</label><input id="f_pre" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
+      <div><label>Órdenes de compra</label><input id="f_po" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
+      <div><label>Facturas</label><input id="f_fac" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
+      <div><label>Tolerancia ±</label><input id="tol" type="text" value="0.02"/></div>
+      <div><label>Ventana (días)</label><input id="vent" type="number" value="90"/></div>
+      <div><label class="chk"><input id="poobl" type="checkbox"/> PO obligatoria</label></div>
+      <button class="btn" onclick="conciliar()">Conciliar</button>
+    </div>
+    <div id="status" class="muted" style="margin-top:10px;font-size:13px"></div>
+  </div>
+
+  <div id="resultado" class="hidden">
+    <div class="card"><div class="kpis" id="kpis"></div></div>
+    <div class="zonas">
+      <div class="card">
+        <div class="card-hd">
+          <strong>Cost report (en bruto)</strong>
+          <span id="filtroLinea" class="filtro hidden" onclick="limpiarFiltro()">✕ quitar filtro</span>
+        </div>
+        <div class="scroll"><table><thead><tr>
+          <th>Línea</th><th class="r">Budget</th><th class="r">Committed</th>
+          <th class="r">Actuals</th><th class="r">ETC</th><th class="r">%</th><th>Estado</th>
+        </tr></thead><tbody id="reporte"></tbody></table></div>
+      </div>
+      <div class="card">
+        <strong>Cola de documentos / revisión</strong>
+        <div class="scroll" style="margin-top:8px"><table><thead><tr>
+          <th>Doc</th><th>Proveedor</th><th class="r">Total</th><th>Línea</th><th>Reasignar</th>
+        </tr></thead><tbody id="cola"></tbody></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <strong>Anomalías</strong> <span class="muted" id="nanom"></span>
+      <div id="anomalias" style="margin-top:8px"></div>
+    </div>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const EUR=v=>Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+let PID='PRJ', DATA=null, FILTRO=null;
+
+async function conciliar(){
+  const pre=$('#f_pre').files[0];
+  if(!pre){ $('#status').textContent='Sube al menos el presupuesto.'; return; }
+  $('#status').textContent='Conciliando…';
+  const fd=new FormData();
+  fd.append('project_id',PID);
+  fd.append('presupuesto',pre);
+  if($('#f_po').files[0]) fd.append('pos',$('#f_po').files[0]);
+  if($('#f_fac').files[0]) fd.append('facturas',$('#f_fac').files[0]);
+  fd.append('po_obligatoria',$('#poobl').checked);
+  fd.append('tolerancia_importe',$('#tol').value||'0.02');
+  fd.append('ventana_dias',$('#vent').value||'90');
+  const r=await fetch('/api/conciliacion/analizar',{method:'POST',body:fd});
+  if(!r.ok){ const e=await r.json().catch(()=>({detail:r.statusText})); $('#status').textContent='⚠ '+(e.detail||'Error'); return; }
+  DATA=await r.json(); $('#status').textContent=''; render();
+}
+
+function render(){
+  $('#resultado').classList.remove('hidden');
+  const s=DATA.resumen;
+  $('#kpis').innerHTML=`
+    <div class="kpi k-gris"><h4>Líneas de presupuesto</h4><div class="n">${s.n_lineas}</div></div>
+    <div class="kpi k-gris"><h4>POs / Facturas</h4><div class="n">${s.n_pos} / ${s.n_facturas}</div></div>
+    <div class="kpi k-ambar"><h4>Sin asignar</h4><div class="n">${s.sin_asignar}</div></div>
+    <div class="kpi k-rojo"><h4>Anomalías</h4><div class="n">${s.n_anomalias}</div></div>`;
+  pintarReporte(); pintarCola(); pintarAnomalias();
+}
+
+function pintarReporte(){
+  $('#reporte').innerHTML=DATA.reporte.map(l=>`
+    <tr class="row ${FILTRO===l.code?'sel':''}" onclick="filtrar('${l.code}')">
+      <td class="lv-${l.nivel}">${l.code} · ${l.description}</td>
+      <td class="r">${EUR(l.budget)}</td><td class="r">${EUR(l.committed)}</td>
+      <td class="r">${EUR(l.actuals)}</td><td class="r">${EUR(l.etc)}</td>
+      <td class="r">${(l.pct*100).toFixed(0)}%</td>
+      <td><span class="tag e-${l.estado}">${l.estado}</span></td>
+    </tr>`).join('');
+}
+
+function opcionesLineas(sel){
+  return DATA.lineas.map(l=>`<option value="${l.code}" ${l.code===sel?'selected':''}>${l.code} · ${l.description}</option>`).join('');
+}
+function pintarCola(){
+  let cs=DATA.cola;
+  if(FILTRO) cs=cs.filter(c=>c.budget_line===FILTRO);
+  $('#cola').innerHTML=cs.map(c=>`
+    <tr>
+      <td><strong>${c.tipo==='po'?'PO':'FAC'}</strong> ${c.numero||''}</td>
+      <td>${c.proveedor||'<span class=muted>—</span>'}</td>
+      <td class="r">${EUR(c.total)}</td>
+      <td><span class="conf c-${c.nivel_confianza}"></span>${c.budget_line||'<span class=muted>sin asignar</span>'} ${c.metodo?`<span class=muted style="font-size:11px">(${c.metodo})</span>`:''}</td>
+      <td><select onchange="reasignar('${c.tipo}','${c.id}',this.value)">
+        <option value="">—</option>${opcionesLineas(c.budget_line)}</select></td>
+    </tr>`).join('');
+}
+
+function pintarAnomalias(){
+  $('#nanom').textContent=`(${DATA.anomalias.length})`;
+  $('#anomalias').innerHTML=DATA.anomalias.map(a=>`
+    <div class="an s-${a.severidad}"><strong>${a.tipo.replace(/_/g,' ')}</strong> · ${a.detalle}
+      <span class="muted">[${a.entity_type} ${a.entity_id.split(':').pop()}]</span></div>`).join('')
+    || '<div class="muted" style="font-size:13px">Sin anomalías.</div>';
+}
+
+function filtrar(code){ FILTRO=(FILTRO===code?null:code); $('#filtroLinea').classList.toggle('hidden',!FILTRO); pintarReporte(); pintarCola(); }
+function limpiarFiltro(){ FILTRO=null; $('#filtroLinea').classList.add('hidden'); pintarReporte(); pintarCola(); }
+
+async function reasignar(tipo,id,code){
+  if(!code) return;
+  const r=await fetch(`/api/conciliacion/${PID}/reasignar`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({entity_type:tipo,entity_id:id,code})});
+  if(r.ok){ DATA=await r.json(); render(); }
+}
+</script>
+</body>
+</html>

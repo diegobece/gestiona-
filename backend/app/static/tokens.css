@@ -1,0 +1,84 @@
+/* Gestiona más — design tokens */
+
+:root {
+  /* Brand */
+  --accent:        #C41E2D;
+  --accent-hover:  #9A1622;
+  --accent-subtle: color-mix(in srgb, var(--accent) 12%, transparent);
+
+  /* Surfaces */
+  --bg:        #FBFBFC;
+  --surface-1: #FFFFFF;
+  --surface-2: #F4F5F7;
+  --surface-3: #ECEEF1;
+
+  /* Text */
+  --text-strong: #14161A;
+  --text:        #3A3F47;
+  --text-muted:  #6B7280;
+  --text-faint:  #9CA3AF;
+
+  /* Borders */
+  --border:        #E4E7EC;
+  --border-strong: #D0D5DD;
+
+  /* Semantic */
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger:  #DC2626;
+  --info:    #2563EB;
+
+  /* Focus */
+  --ring: color-mix(in srgb, var(--accent) 45%, transparent);
+
+  /* Spacing — 4px base */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
+
+  /* Radius */
+  --r-sm: 6px;   --r-md: 8px;   --r-lg: 12px;  --r-xl: 16px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
+  --shadow-md: 0 2px 8px rgba(16,24,40,.08);
+  --shadow-lg: 0 8px 24px rgba(16,24,40,.12);
+
+  /* Typography */
+  --font-body: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  --font-mono: 'Cascadia Code', Consolas, ui-monospace, monospace;
+
+  /* Motion */
+  --ease-out:    cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --dur-fast:  120ms;
+  --dur-base:  200ms;
+  --dur-slow:  320ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #0C0E12;
+    --surface-1: #14171D;
+    --surface-2: #1B1F27;
+    --surface-3: #232832;
+    --text-strong: #F4F5F7;
+    --text:        #C7CCD4;
+    --text-muted:  #8A909B;
+    --text-faint:  #5C626D;
+    --border:        #262B34;
+    --border-strong: #333944;
+    --accent-subtle: color-mix(in srgb, var(--accent) 20%, transparent);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+    --shadow-md: 0 2px 8px rgba(0,0,0,.35);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
