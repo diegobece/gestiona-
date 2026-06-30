@@ -184,13 +184,43 @@ _ESTILO_AUTH = """
 """
 
 
+_TEMA_JS = (
+    '<script>(function(){var t=localStorage.getItem("theme");'
+    'if(t)document.documentElement.setAttribute("data-theme",t);'
+    'document.addEventListener("DOMContentLoaded",function(){'
+    'var isDark=document.documentElement.getAttribute("data-theme")==="dark"'
+    '||(!document.documentElement.getAttribute("data-theme")&&window.matchMedia("(prefers-color-scheme:dark)").matches);'
+    'var btn=document.getElementById("themeBtn");'
+    'if(btn)btn.textContent=isDark?"☀":"☾";});})();<\/script>'
+    '<script>function toggleTheme(){'
+    'var r=document.documentElement;'
+    'var isDark=r.getAttribute("data-theme")==="dark"'
+    '||(!r.getAttribute("data-theme")&&window.matchMedia("(prefers-color-scheme:dark)").matches);'
+    'var next=isDark?"light":"dark";'
+    'r.setAttribute("data-theme",next);localStorage.setItem("theme",next);'
+    'document.getElementById("themeBtn").textContent=next==="dark"?"☀":"☾";'
+    '}<\/script>'
+)
+
+_TEMA_BTN = (
+    '<button id="themeBtn" onclick="toggleTheme()" '
+    'style="position:fixed;top:14px;right:16px;width:30px;height:30px;'
+    'border-radius:8px;border:1px solid var(--border);background:transparent;'
+    'color:var(--text-muted);cursor:pointer;font-size:0.875rem;'
+    'display:flex;align-items:center;justify-content:center;'
+    'transition:background 120ms,border-color 120ms;z-index:999;" '
+    'title="Cambiar tema" aria-label="Cambiar tema">☾</button>'
+)
+
+
 def _cabecera(titulo: str) -> str:
     return (f'<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>'
             f'<meta name="viewport" content="width=device-width, initial-scale=1"/>'
             f'<title>{titulo} · Gestiona más</title>'
             f'<link rel="stylesheet" href="/static/tokens.css"/>'
             f'<style>{_ESTILO_AUTH}</style>'
-            f'</head><body>')
+            f'{_TEMA_JS}'
+            f'</head><body>{_TEMA_BTN}')
 
 
 def _wm() -> str:

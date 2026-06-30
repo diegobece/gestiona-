@@ -6,6 +6,7 @@
 <title>Gestiona más — Conciliación Presupuestaria</title>
 <link rel="stylesheet" href="/static/tokens.css"/>
 <link rel="stylesheet" href="/static/base.css"/>
+<script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
 <style>
   /* ── Page-specific: conciliacion.html ─────────────────────── */
 
@@ -61,14 +62,36 @@
   /* ── Filter reset link ──────────────────────────────────────── */
   .filtro { font-size: 0.8125rem; color: var(--accent); cursor: pointer; font-weight: 500; }
 
+  /* ── Upload: 3-box grid ─────────────────────────────────────── */
+  .up3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-5); }
+  @media (max-width: 768px) { .up3 { grid-template-columns: 1fr; } }
+  .upbox { border: 2px dashed var(--border-strong); border-radius: var(--r-lg); padding: var(--sp-6) var(--sp-4); text-align: center; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
+  .upbox:hover { border-color: var(--accent); background: var(--accent-subtle); }
+  .upbox-icon { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--sp-3); }
+  .upbox-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-strong); margin-bottom: var(--sp-1); }
+  .upbox-hint { font-size: 0.75rem; color: var(--text-faint); margin-bottom: var(--sp-4); }
+  .upbox-btn { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2) var(--sp-4); border: 1px solid var(--border); border-radius: var(--r-md); font: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer; color: var(--text); background: var(--surface-1); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+  .upbox-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+  .upbox-btn input[type=file] { display: none; }
+  .upbox-file { margin-top: var(--sp-2); font-size: 0.8125rem; color: var(--success); font-weight: 500; }
+  .up-opts { display: flex; gap: var(--sp-5); flex-wrap: wrap; align-items: center; justify-content: center; padding: var(--sp-3) 0 var(--sp-2); border-top: 1px solid var(--border); margin-bottom: var(--sp-4); }
+  .up-opts label { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: var(--sp-2); }
+  .up-action { text-align: center; margin-bottom: var(--sp-2); }
+
   /* ── Dark mode overrides ────────────────────────────────────── */
   @media (prefers-color-scheme: dark) {
-    input[type=text], input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-    select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-    .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
-    .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
-    .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
+    :root:not([data-theme="light"]) input[type=text],
+    :root:not([data-theme="light"]) input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+    :root:not([data-theme="light"]) select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+    :root:not([data-theme="light"]) .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
+    :root:not([data-theme="light"]) .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
+    :root:not([data-theme="light"]) .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
   }
+  [data-theme="dark"] input[type=text],[data-theme="dark"] input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
+  [data-theme="dark"] .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
+  [data-theme="dark"] .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
 </style>
 </head>
 <body>
@@ -83,21 +106,44 @@
     <a class="nav-tab active" href="/conciliacion">Conciliación Presupuestaria</a>
   </nav>
   <div class="topbar-actions">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">☾</button>
     <a class="hdr-link" href="/logout">Salir</a>
   </div>
 </header>
 <main>
   <div class="card">
-    <div class="up">
-      <div><label>Presupuesto (Movie Magic)</label><input id="f_pre" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
-      <div><label>Órdenes de compra</label><input id="f_po" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
-      <div><label>Facturas</label><input id="f_fac" type="file" accept=".csv,.xlsx,.xls,.json"/></div>
-      <div><label>Tolerancia ±</label><input id="tol" type="text" value="0.02"/></div>
-      <div><label>Ventana (días)</label><input id="vent" type="number" value="90"/></div>
-      <div><label class="chk"><input id="poobl" type="checkbox"/> PO obligatoria</label></div>
-      <button class="btn" onclick="conciliar()">Conciliar</button>
+    <div class="up3">
+      <div class="upbox">
+        <div class="upbox-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <div class="upbox-title">Presupuesto</div>
+        <div class="upbox-hint">Movie Magic · CSV, XLSX</div>
+        <label class="upbox-btn"><input id="f_pre" type="file" accept=".csv,.xlsx,.xls,.json" onchange="setFile(this,'fn_pre')"/> Seleccionar archivo</label>
+        <div id="fn_pre" class="upbox-file hidden"></div>
+      </div>
+      <div class="upbox">
+        <div class="upbox-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg></div>
+        <div class="upbox-title">Órdenes de compra</div>
+        <div class="upbox-hint">CSV, XLSX · opcional</div>
+        <label class="upbox-btn"><input id="f_po" type="file" accept=".csv,.xlsx,.xls,.json" onchange="setFile(this,'fn_po')"/> Seleccionar archivo</label>
+        <div id="fn_po" class="upbox-file hidden"></div>
+      </div>
+      <div class="upbox">
+        <div class="upbox-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h4M8 17h6"/><circle cx="18" cy="18" r="4"/><path d="M18 16v2l1 1"/></svg></div>
+        <div class="upbox-title">Facturas</div>
+        <div class="upbox-hint">CSV, XLSX · opcional</div>
+        <label class="upbox-btn"><input id="f_fac" type="file" accept=".csv,.xlsx,.xls,.json" onchange="setFile(this,'fn_fac')"/> Seleccionar archivo</label>
+        <div id="fn_fac" class="upbox-file hidden"></div>
+      </div>
     </div>
-    <div id="status" class="muted" style="margin-top:10px;font-size:13px"></div>
+    <div class="up-opts">
+      <label>Tolerancia ± <input id="tol" type="text" value="0.02"/></label>
+      <label>Ventana (días) <input id="vent" type="number" value="90"/></label>
+      <label class="chk"><input id="poobl" type="checkbox"/> PO obligatoria</label>
+    </div>
+    <div class="up-action">
+      <button class="btn" onclick="conciliar()">Analizar</button>
+    </div>
+    <div id="status" class="muted" style="text-align:center;font-size:13px;margin-top:var(--sp-2)"></div>
   </div>
 
   <div id="resultado" class="hidden">
@@ -127,6 +173,28 @@
   </div>
 </main>
 <script>
+function toggleTheme(){
+  const r=document.documentElement;
+  const isDark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const next=isDark?'light':'dark';
+  r.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').textContent=next==='dark'?'☀':'☾';
+}
+(function(){
+  const r=document.documentElement;
+  const isDark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  document.addEventListener('DOMContentLoaded',function(){
+    const btn=document.getElementById('themeBtn');
+    if(btn)btn.textContent=isDark?'☀':'☾';
+  });
+})();
+function setFile(input,nameId){
+  const el=document.getElementById(nameId);
+  if(input.files[0]){el.textContent='✓ '+input.files[0].name;el.classList.remove('hidden');}
+  else{el.classList.add('hidden');}
+}
+
 const $=s=>document.querySelector(s);
 const EUR=v=>Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
 let PID='PRJ', DATA=null, FILTRO=null;

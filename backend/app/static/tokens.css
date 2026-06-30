@@ -1,5 +1,13 @@
 /* Gestiona más — design tokens */
 
+@font-face {
+  font-family: 'Geist';
+  src: url('/static/fonts/GeistVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Brand */
   --accent:        #C41E2D;
@@ -44,7 +52,7 @@
   --shadow-lg: 0 8px 24px rgba(16,24,40,.12);
 
   /* Typography */
-  --font-body: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  --font-body: 'Geist', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
   --font-mono: 'Cascadia Code', Consolas, ui-monospace, monospace;
 
   /* Motion */
@@ -55,8 +63,9 @@
   --dur-slow:  320ms;
 }
 
+/* Dark theme — applied by system preference OR manual toggle */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg:        #0C0E12;
     --surface-1: #14171D;
     --surface-2: #1B1F27;
@@ -72,6 +81,24 @@
     --shadow-md: 0 2px 8px rgba(0,0,0,.35);
     --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
   }
+}
+
+/* Manual dark override */
+[data-theme="dark"] {
+  --bg:        #0C0E12;
+  --surface-1: #14171D;
+  --surface-2: #1B1F27;
+  --surface-3: #232832;
+  --text-strong: #F4F5F7;
+  --text:        #C7CCD4;
+  --text-muted:  #8A909B;
+  --text-faint:  #5C626D;
+  --border:        #262B34;
+  --border-strong: #333944;
+  --accent-subtle: color-mix(in srgb, var(--accent) 20%, transparent);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.35);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
 }
 
 @media (prefers-reduced-motion: reduce) {

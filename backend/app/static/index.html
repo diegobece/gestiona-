@@ -6,6 +6,7 @@
 <title>Gestiona más — Análisis contable</title>
 <link rel="stylesheet" href="/static/tokens.css"/>
 <link rel="stylesheet" href="/static/base.css"/>
+<script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
 <style>
   /* ── Hero ──────────────────────────────────────────────────── */
   .hero { text-align: center; padding: var(--sp-10) var(--sp-4) var(--sp-6); }
@@ -67,11 +68,15 @@
 
   /* ── Dark mode page-specific overrides ─────────────────────── */
   @media (prefers-color-scheme: dark) {
-    .debe { color: #93C5FD; }
-    .cand h5 { color: #86EFAC; }
-    .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
-    .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
+    :root:not([data-theme="light"]) .debe { color: #93C5FD; }
+    :root:not([data-theme="light"]) .cand h5 { color: #86EFAC; }
+    :root:not([data-theme="light"]) .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
+    :root:not([data-theme="light"]) .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
   }
+  [data-theme="dark"] .debe { color: #93C5FD; }
+  [data-theme="dark"] .cand h5 { color: #86EFAC; }
+  [data-theme="dark"] .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
+  [data-theme="dark"] .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
 </style>
 </head>
 <body>
@@ -86,6 +91,7 @@
     <a class="nav-tab" href="/conciliacion">Conciliación Presupuestaria</a>
   </nav>
   <div class="topbar-actions">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">☾</button>
     <a class="hdr-link" href="/logout">Salir</a>
   </div>
 </header>
@@ -211,6 +217,23 @@
 </main>
 
 <script>
+function toggleTheme(){
+  const r=document.documentElement;
+  const isDark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const next=isDark?'light':'dark';
+  r.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').textContent=next==='dark'?'☀':'☾';
+}
+(function(){
+  const r=document.documentElement;
+  const isDark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  document.addEventListener('DOMContentLoaded',function(){
+    const btn=document.getElementById('themeBtn');
+    if(btn)btn.textContent=isDark?'☀':'☾';
+  });
+})();
+
 const $ = s => document.querySelector(s);
 let HUELLA = null;
 

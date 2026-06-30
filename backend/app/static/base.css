@@ -1,5 +1,10 @@
 /* Gestiona más — shell & shared component styles */
 
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
 body {
   font-family: var(--font-body);
   margin: 0;
@@ -7,6 +12,8 @@ body {
   color: var(--text);
   font-size: 0.875rem;
   line-height: 1.5;
+  transition: background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
 }
 
 /* ── Top bar ────────────────────────────────────────────────── */
@@ -21,6 +28,8 @@ body {
   display: flex;
   align-items: stretch;
   height: 52px;
+  transition: background var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
 }
 
 .topbar-brand {
@@ -105,7 +114,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0 var(--sp-6);
-  gap: var(--sp-4);
+  gap: var(--sp-3);
   flex-shrink: 0;
 }
 
@@ -118,6 +127,30 @@ body {
 
 .hdr-link:hover { color: var(--accent); }
 .hdr-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--r-sm); }
+
+/* ── Theme toggle button ─────────────────────────────────────── */
+
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+
+.theme-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.theme-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 @media (max-width: 640px) {
   .topbar-brand { padding: 0 var(--sp-3); }
@@ -133,6 +166,7 @@ main {
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--sp-6) var(--sp-8);
+  animation: fadeUp var(--dur-slow) var(--ease-out) both;
 }
 
 @media (max-width: 768px) {
@@ -167,8 +201,10 @@ main {
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-6);
   margin-bottom: var(--sp-4);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--dur-base) var(--ease-out);
+  box-shadow: 0 1px 3px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.06);
+  transition: box-shadow var(--dur-base) var(--ease-out),
+              background var(--dur-base) var(--ease-out),
+              border-color var(--dur-base) var(--ease-out);
 }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
@@ -611,48 +647,23 @@ code {
 /* ── Dark mode overrides for semantic components ──────────────── */
 
 @media (prefers-color-scheme: dark) {
-  .t-REVISAR {
-    background: color-mix(in srgb, var(--warning) 20%, transparent);
-    color: #FDE68A;
-    border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-  }
-  .t-CONCILIADA {
-    background: color-mix(in srgb, var(--success) 20%, transparent);
-    color: #86EFAC;
-    border-color: color-mix(in srgb, var(--success) 50%, transparent);
-  }
-  .e-dentro {
-    background: color-mix(in srgb, var(--success) 20%, transparent);
-    color: #86EFAC;
-    border-color: color-mix(in srgb, var(--success) 50%, transparent);
-  }
-  .e-cerca {
-    background: color-mix(in srgb, var(--warning) 20%, transparent);
-    color: #FDE68A;
-    border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-  }
-  .vistog.on {
-    background: color-mix(in srgb, var(--success) 20%, transparent);
-    color: #86EFAC;
-    border-color: color-mix(in srgb, var(--success) 50%, transparent);
-  }
-  .senal {
-    background: color-mix(in srgb, var(--success) 20%, transparent);
-    color: #86EFAC;
-    border-color: color-mix(in srgb, var(--success) 50%, transparent);
-  }
-  .subtag {
-    background: color-mix(in srgb, var(--warning) 20%, transparent);
-    color: #FDE68A;
-  }
-  .banner.warn {
-    background: color-mix(in srgb, var(--warning) 15%, transparent);
-    border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-    color: #FDE68A;
-  }
-  .banner.info {
-    background: color-mix(in srgb, var(--info) 15%, transparent);
-    border-color: color-mix(in srgb, var(--info) 50%, transparent);
-    color: #93C5FD;
-  }
+  :root:not([data-theme="light"]) .t-REVISAR { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+  :root:not([data-theme="light"]) .t-CONCILIADA { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+  :root:not([data-theme="light"]) .e-dentro { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+  :root:not([data-theme="light"]) .e-cerca { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+  :root:not([data-theme="light"]) .vistog.on { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+  :root:not([data-theme="light"]) .senal { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+  :root:not([data-theme="light"]) .subtag { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; }
+  :root:not([data-theme="light"]) .banner.warn { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 50%, transparent); color: #FDE68A; }
+  :root:not([data-theme="light"]) .banner.info { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 50%, transparent); color: #93C5FD; }
 }
+
+[data-theme="dark"] .t-REVISAR { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+[data-theme="dark"] .t-CONCILIADA { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+[data-theme="dark"] .e-dentro { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+[data-theme="dark"] .e-cerca { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+[data-theme="dark"] .vistog.on { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+[data-theme="dark"] .senal { background: color-mix(in srgb, var(--success) 20%, transparent); color: #86EFAC; border-color: color-mix(in srgb, var(--success) 50%, transparent); }
+[data-theme="dark"] .subtag { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #FDE68A; }
+[data-theme="dark"] .banner.warn { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 50%, transparent); color: #FDE68A; }
+[data-theme="dark"] .banner.info { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 50%, transparent); color: #93C5FD; }
