@@ -18,13 +18,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo Iniciando el servidor en http://127.0.0.1:8011
+echo Iniciando el servidor en http://localhost:8011
 echo El navegador se abrira automaticamente en unos segundos.
 echo Para detener la plataforma: cierra esta ventana o pulsa Ctrl+C.
 echo ============================================================
 
 rem Abre el navegador tras un breve retardo, cuando el servidor ya escucha.
-start "" cmd /c "timeout /t 3 >nul & start http://127.0.0.1:8011"
+start "" cmd /c "timeout /t 3 >nul & start http://localhost:8011"
 
-python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8011
+python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8011
 pause
