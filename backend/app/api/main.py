@@ -74,7 +74,8 @@ async def analizar(file: UploadFile = File(...)) -> JSONResponse:
     _informes[informe.huella] = informe
     _informes_fsp[informe.huella] = informe_fsp
     return JSONResponse(informe_a_dict(
-        informe, _store.listar(informe.huella), _store.ocultos(informe.huella)))
+        informe, _store.listar(informe.huella), _store.ocultos(informe.huella),
+        _store.visibilidad(informe.huella)))
 
 
 @app.get("/api/informe/{huella}")
@@ -83,7 +84,8 @@ def obtener(huella: str) -> JSONResponse:
     if informe is None:
         raise HTTPException(404, "Informe no encontrado (vuelve a subir el fichero).")
     return JSONResponse(informe_a_dict(
-        informe, _store.listar(huella), _store.ocultos(huella)))
+        informe, _store.listar(huella), _store.ocultos(huella),
+        _store.visibilidad(huella)))
 
 
 @app.get("/api/informe/{huella}/facturas")

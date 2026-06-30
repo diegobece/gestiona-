@@ -105,9 +105,11 @@ def _breakdown_fuera_alcance(inf: Informe) -> list[dict]:
 
 
 def informe_a_dict(inf: Informe, overrides: dict | None = None,
-                   ocultos: set | None = None) -> dict:
+                   ocultos: set | None = None,
+                   visibilidad: dict | None = None) -> dict:
     overrides = overrides or {}
     ocultos = ocultos or set()
+    visibilidad = visibilidad or {}
     cuentas = []
     for r in inf.resultados:
         d = cuenta_a_dict(r)
@@ -117,7 +119,10 @@ def informe_a_dict(inf: Informe, overrides: dict | None = None,
              "creado_en": ov.creado_en}
             if ov else None
         )
-        d["mostrar"] = r.codigo_cuenta not in ocultos  # incluido en el informe PDF
+        if r.clasificacion == Clasificacion.REVISAR:
+            d["mostrar"] = visibilidad.get(r.codigo_cuenta, False)
+        else:
+            d["mostrar"] = r.codigo_cuenta not in ocultos
         cuentas.append(d)
     return {
         "revisar_subcategorias": _breakdown_revisar(inf),

@@ -144,6 +144,7 @@ def _cabeceras_seguridad(resp) -> None:
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "no-referrer"
     resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    resp.headers["Cache-Control"] = "no-store"
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' data:; "
         "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
