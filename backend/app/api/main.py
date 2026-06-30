@@ -166,7 +166,7 @@ def export_pdf(huella: str) -> Response:
     informe = _informes.get(huella)
     if informe is None:
         raise HTTPException(404, "Informe no encontrado.")
-    datos = exportar_pdf(informe, _store.ocultos(huella))
+    datos = exportar_pdf(informe, _store.ocultos(huella), _store.visibilidad(huella))
     return Response(
         datos,
         media_type="application/pdf",

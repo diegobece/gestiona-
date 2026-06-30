@@ -143,14 +143,20 @@ class _Informe(FPDF):
         self.cell(28, 3.4, f"Página {self.page_no()} de {{nb}}", align="R")
 
 
-def exportar_pdf(inf: Informe, ocultos: set[str] | None = None) -> bytes:
+def exportar_pdf(inf: Informe, ocultos: set[str] | None = None,
+                 visibilidad: dict[str, bool] | None = None) -> bytes:
     ocultos = ocultos or set()
+    visibilidad = visibilidad or {}
     pdf = _Informe()
     pdf.add_page()
 
-    cuentas = [r for r in inf.resultados
-               if r.clasificacion == Clasificacion.SIN_FACTURA_ALTA_CONFIANZA
-               and r.codigo_cuenta not in ocultos]
+    cuentas = [
+        r for r in inf.resultados
+        if (r.clasificacion == Clasificacion.SIN_FACTURA_ALTA_CONFIANZA
+            and r.codigo_cuenta not in ocultos)
+        or (r.clasificacion == Clasificacion.REVISAR
+            and visibilidad.get(r.codigo_cuenta) is True)
+    ]
     total = sum((r.importe_sospechoso for r in cuentas), Decimal("0.00"))
 
     # --- Título e introducción ---------------------------------------------

@@ -164,8 +164,8 @@
       <div class="card-hd">
         <strong>Cuentas analizadas</strong>
         <div class="exports">
-          <a id="xlsx" class="btn" href="#" title="Detalle completo y auditable (todas las cuentas y movimientos)">⬇ Excel</a>
-          <a id="pdf" class="btn" href="#" title="Informe del cliente: solo los pagos sin factura marcados como «En informe»">⬇ PDF cliente</a>
+          <button class="btn-ghost" onclick="descargar('xlsx')">⬇ Excel</button>
+          <button class="btn-ghost" onclick="descargar('pdf')">⬇ PDF cliente</button>
         </div>
       </div>
       <table>
@@ -200,7 +200,7 @@
         <div class="card-hd">
           <strong>Cuentas analizadas</strong>
           <div class="exports">
-            <a id="pdfF" class="btn" href="#" title="Informe del cliente: facturas sin pago + las infrapagadas que añadas al revisarlas">⬇ PDF cliente</a>
+            <button class="btn-ghost" onclick="descargar('pdfF')">⬇ PDF cliente</button>
           </div>
         </div>
         <table>
@@ -275,14 +275,39 @@ async function subir(f){
   $('#status').textContent = '';
 }
 
+async function descargar(tipo){
+  const urls = {
+    xlsx: [`/api/informe/${HUELLA}/export.xlsx`, `informe_${HUELLA}.xlsx`],
+    pdf:  [`/api/informe/${HUELLA}/export.pdf`,  `informe_${HUELLA}.pdf`],
+    pdfF: [`/api/informe/${HUELLA}/facturas/export.pdf`, `facturas_${HUELLA}.pdf`],
+  };
+  const [url, filename] = urls[tipo];
+  try {
+    const r = await fetch(url);
+    if(!r.ok){
+      const e = await r.json().catch(()=>({detail:`Error ${r.status}`}));
+      alert('No se pudo generar el documento: ' + (e.detail||r.statusText) + '\n\nVuelve a subir el fichero si la sesión expiró.');
+      return;
+    }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch(e) {
+    alert('Error al descargar: ' + e.message);
+  }
+}
+
 function render(data){
   HUELLA = data.huella;
   window._dataF = null;            // se recarga al abrir la pestaña de facturas
   setTabUI('pagos');
   $('#landing').classList.add('hidden');   // centramos la atención en los resultados
   $('#result').classList.remove('hidden');
-  $('#xlsx').href = `/api/informe/${HUELLA}/export.xlsx`;
-  $('#pdf').href  = `/api/informe/${HUELLA}/export.pdf`;
 
   // Banners
   const FLAG = {
@@ -420,9 +445,15 @@ function selPago(cod, orden, btn){
 }
 
 function visToggle(c){
-  if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA') return '';
-  const on = c.mostrar!==false;
-  return `<button class="vistog ${on?'on':'off'}" title="Decide si este pago sin factura aparece en el informe PDF del cliente" onclick="setVis(event,'${c.codigo_cuenta}',${!on})">${on?'✓ En informe':'✗ Oculto del informe'}</button>`;
+  if(c.clasificacion==='SIN_FACTURA_ALTA_CONFIANZA'){
+    const on = c.mostrar!==false;
+    return `<button class="vistog ${on?'on':'off'}" title="Decide si este pago sin factura aparece en el informe PDF del cliente" onclick="setVis(event,'${c.codigo_cuenta}',${!on})">${on?'✓ En informe':'✗ Oculto del informe'}</button>`;
+  }
+  if(c.clasificacion==='REVISAR'){
+    const on = c.mostrar===true;
+    return `<button class="vistog ${on?'on':'off'}" title="Añade esta cuenta en revisión al PDF si confirmas que es un pago sin factura" onclick="setVis(event,'${c.codigo_cuenta}',${!on})">${on?'✓ Añadida al informe':'+ Añadir al informe'}</button>`;
+  }
+  return '';
 }
 
 async function setVis(ev, cod, mostrar){
@@ -493,7 +524,6 @@ const AGINGCOL = {'0–30 días':'#1e8449','31–60 días':'#b9770e','61–90 d�
 const ORDENF = {FACTURA_SIN_PAGO:0, REVISAR:1, NO_FIABLE:2, CONCILIADA:3, EXCLUIDA:4, FUERA_DE_ALCANCE:5};
 
 function renderFacturas(d){
-  $('#pdfF').href = `/api/informe/${HUELLA}/facturas/export.pdf`;
   const s = d.resumen;
   let b = (d.flags_globales||[]).map(f=>`<div class="banner warn">${FLAGF[f]||f}</div>`).join('');
   if(s.n_fuera_alcance>0)
@@ -558,7 +588,7 @@ function filaFactura(c, i){
     <td class="right">${EUR(c.suma_haber)}</td>
     <td class="right"><strong>${Number(c.importe_pendiente)?EUR(c.importe_pendiente):'—'}</strong></td>
     <td>${c.num_facturas}/${c.num_pagos}</td>
-    <td><span class="muted">—</span></td>
+    <td onclick="event.stopPropagation()">${accionesF(c,i)}</td>
   </tr>
   <tr class="detail hidden" id="df${i}"><td colspan="8"><div class="inner">
     <p class="motivo">${c.motivo}</p>
@@ -568,6 +598,11 @@ function filaFactura(c, i){
 }
 
 function toggleF(i){ $('#df'+i).classList.toggle('hidden'); }
+function accionesF(c,i){
+  if(c.clasificacion!=='FACTURA_SIN_PAGO' && c.clasificacion!=='REVISAR') return '<span class="muted">—</span>';
+  return `<button onclick="toggleFFromCell(this)">Revisar ▾</button>`;
+}
+function toggleFFromCell(btn){ const tr=btn.closest('tr'); const idx=[...tr.parentNode.children].indexOf(tr); tr.parentNode.children[idx+1].classList.toggle('hidden'); }
 
 function visToggleF(c){
   if(c.clasificacion==='FACTURA_SIN_PAGO'){
