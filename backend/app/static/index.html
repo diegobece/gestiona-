@@ -75,6 +75,14 @@
       <div class="muted" style="margin-top:8px;font-size:13px;text-align:center;max-width:640px;margin-left:auto;margin-right:auto">Añade el extracto del banco (Excel/CSV) para cruzarlo con los pagos y detectar <strong>pagos del banco sin registro contable</strong> sin duplicar los ya registrados.</div>
     </div>
     <div id="status" class="muted" style="margin-top:12px;text-align:center"></div>
+    <div id="progress" class="progress hidden">
+      <div class="progress-hd">
+        <span class="progress-file"><span class="fic">▣</span><span id="progName"></span></span>
+        <span id="progLabel" class="progress-pct">0%</span>
+      </div>
+      <div class="progress-track"><div id="progFill" class="progress-fill"></div></div>
+      <div id="progStep" class="progress-step">Preparando…</div>
+    </div>
   </div>
 
   <div id="result" class="hidden">
@@ -252,16 +260,59 @@ function iniciarAnalisis(){
   if(window._pendingFile) subir(window._pendingFile);
 }
 
+// ── Barra de progreso (referencia visual del proceso) ─────────────────────
+let _progTimer = null;
+const _PROG_PASOS = ['Leyendo el fichero…','Reconstruyendo saldos…','Detectando pagos sin factura…',
+                     'Analizando facturas sin pago…','Cruzando evidencias…','Preparando el informe…'];
+function startProgress(name){
+  $('#status').textContent = '';
+  $('#progName').textContent = name;
+  $('#progFill').style.width = '0%';
+  $('#progLabel').textContent = '0%';
+  $('#progStep').textContent = _PROG_PASOS[0];
+  $('#progress').classList.remove('hidden');
+  let pct = 0;
+  clearInterval(_progTimer);
+  _progTimer = setInterval(()=>{
+    pct = Math.min(92, pct + (92-pct)*0.08 + 0.5);   // asintótico hacia ~92%
+    $('#progFill').style.width = pct.toFixed(0)+'%';
+    $('#progLabel').textContent = pct.toFixed(0)+'%';
+    $('#progStep').textContent = _PROG_PASOS[Math.min(_PROG_PASOS.length-1, Math.floor(pct/16))];
+  }, 220);
+}
+function finishProgress(ok){
+  clearInterval(_progTimer);
+  if(ok){
+    $('#progFill').style.width = '100%';
+    $('#progLabel').textContent = '100%';
+    $('#progStep').textContent = 'Análisis completado';
+    setTimeout(()=>$('#progress').classList.add('hidden'), 480);
+  } else {
+    $('#progress').classList.add('hidden');
+  }
+}
+
 async function subir(f){
   $('#confirmar').classList.add('hidden');
-  $('#status').textContent = 'Analizando ' + f.name + '…';
   $('#result').classList.add('hidden');
+  startProgress(f.name);
   const fd = new FormData(); fd.append('file', f);
   if(window._bancoFile) fd.append('banco', window._bancoFile);
-  const r = await fetch('/api/analizar', {method:'POST', body:fd});
-  if(!r.ok){ const e = await r.json().catch(()=>({detail:r.statusText})); $('#status').textContent = (e.detail||'Error al procesar el archivo'); return; }
-  render(await r.json());
-  $('#status').textContent = '';
+  try {
+    const r = await fetch('/api/analizar', {method:'POST', body:fd});
+    if(!r.ok){
+      finishProgress(false);
+      const e = await r.json().catch(()=>({detail:r.statusText}));
+      $('#status').textContent = (e.detail||'Error al procesar el archivo');
+      return;
+    }
+    const data = await r.json();
+    finishProgress(true);
+    render(data);
+  } catch(e) {
+    finishProgress(false);
+    $('#status').textContent = 'Error de red al analizar: ' + e.message;
+  }
 }
 
 async function descargar(tipo){

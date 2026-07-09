@@ -3,106 +3,95 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Gestiona más — Conciliación Presupuestaria</title>
-<link rel="stylesheet" href="/static/tokens.css"/>
-<link rel="stylesheet" href="/static/base.css"/>
+<title>Gestiona+ · Conciliación Presupuestaria</title>
+<link rel="stylesheet" href="/static/fonts_gestiona.css"/>
+<link rel="stylesheet" href="/static/app.css"/>
 <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
 <style>
-  /* ── Page-specific: conciliacion.html ─────────────────────── */
+  main{max-width:1400px}
+  .card.pad{padding:22px 24px}
+  .card.pad>strong{display:block;font-size:17px;font-weight:700;color:var(--tx);margin-bottom:12px}
 
-  main { max-width: 1400px; }
+  /* ── Carga: 3 cajas ─────────────────────────────────────────── */
+  .up3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px}
+  @media(max-width:768px){.up3{grid-template-columns:1fr}}
+  .upbox{background:var(--card);border:2px dashed var(--dash);border-radius:16px;padding:28px 22px;text-align:center;
+    transition:border-color .2s,background .2s}
+  .upbox:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 4%,var(--card))}
+  .upbox-icon{width:46px;height:46px;border-radius:12px;background:var(--red-bg);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+  .upbox-title{font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px}
+  .upbox-hint{font-size:12px;color:var(--mut);margin-bottom:16px}
+  .upbox-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid var(--ibd);
+    border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx);background:var(--card);
+    transition:border-color .18s,color .18s}
+  .upbox-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .upbox-btn input[type=file]{display:none}
+  .upbox-file{margin-top:10px;font-size:13px;color:var(--green);font-weight:600}
+  .up-opts{display:flex;gap:22px;flex-wrap:wrap;align-items:center;justify-content:center;padding:16px 0;
+    border-top:1px solid var(--bd-soft);margin-bottom:16px}
+  .up-opts label,.chk{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:8px}
+  input[type=text],input[type=number]{font:inherit;padding:8px 11px;border:1px solid var(--ibd);border-radius:9px;
+    width:90px;background:var(--card-2);color:var(--tx);transition:border-color .18s,box-shadow .18s}
+  input[type=text]:focus,input[type=number]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(225,24,53,.12)}
+  select{font:inherit;font-size:13px;border:1px solid var(--ibd);border-radius:9px;padding:7px 10px;
+    background:var(--card-2);color:var(--tx)}
+  .up-action{text-align:center;margin-bottom:6px}
+  button.btn{font:inherit;font-weight:700;border:none;background:var(--accent);color:#fff;border-radius:10px;
+    padding:11px 26px;cursor:pointer;font-size:14px;box-shadow:0 12px 24px -12px rgba(225,24,53,.6);
+    transition:background .18s,transform .12s}
+  button.btn:hover{background:var(--accent-hover)}
+  button.btn:active{transform:scale(.99)}
 
-  /* ── Upload form ───────────────────────────────────────────── */
-  .up { display: flex; gap: var(--sp-5); flex-wrap: wrap; align-items: flex-end; }
-  .up label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--sp-1); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-  input[type=file] { font: inherit; font-size: 0.8125rem; color: var(--text); }
-  input[type=text], input[type=number] { font: inherit; padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-md); width: 90px; background: var(--surface-1); color: var(--text); transition: border-color var(--dur-fast) var(--ease-out); }
-  input[type=text]:focus, input[type=number]:focus { outline: 2px solid var(--ring); outline-offset: 0; border-color: var(--accent); }
-  select { font: inherit; font-size: 0.8125rem; border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-1) var(--sp-2); background: var(--surface-1); color: var(--text); }
-  .chk { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: var(--sp-1); }
+  /* ── KPIs (usa clase .kpis) ─────────────────────────────────── */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:0}
+  .card:has(> .kpis){background:transparent;border:none;box-shadow:none;overflow:visible;animation:none}
+  .kpi h4{font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--mut);text-transform:uppercase;margin:0 0 12px}
 
-  /* Primary button (overrides a.btn ghost style; applies to button.btn element) */
-  button.btn {
-    font: inherit;
-    font-weight: 600;
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    border-radius: var(--r-md);
-    padding: var(--sp-2) var(--sp-5);
-    cursor: pointer;
-    transition: background var(--dur-fast) var(--ease-out);
-  }
-  button.btn:hover { background: var(--accent-hover); }
-  button.btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  /* ── Zonas / scroll ─────────────────────────────────────────── */
+  .zonas{display:grid;grid-template-columns:1.45fr 1fr;gap:22px}
+  @media(max-width:1000px){.zonas{grid-template-columns:1fr}}
+  .scroll{max-height:520px;overflow:auto}
+  .scroll th{top:0}
+  th.r,td.r{text-align:right}
+  td.r{font-family:var(--mono)}
 
-  /* ── Two-column results grid ────────────────────────────────── */
-  .zonas { display: grid; grid-template-columns: 1.45fr 1fr; gap: var(--sp-4); }
-  @media (max-width: 1000px) { .zonas { grid-template-columns: 1fr; } }
-  .scroll { max-height: 520px; overflow: auto; }
-  .scroll th { top: 0; }
+  /* ── Jerarquía de presupuesto ───────────────────────────────── */
+  .lv-topsheet{font-weight:700;color:var(--tx)}
+  .lv-account{font-weight:600}
+  .lv-detail{padding-left:18px;color:var(--mut)}
 
-  /* ── Budget hierarchy levels ────────────────────────────────── */
-  .lv-topsheet { font-weight: 700; color: var(--text-strong); }
-  .lv-account  { font-weight: 600; }
-  .lv-detail   { padding-left: var(--sp-4); color: var(--text-muted); }
+  /* ── Punto de confianza (sobrescribe .conf de app.css) ──────── */
+  .conf{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 6px 0 0;vertical-align:middle;font-size:0}
+  .c-alta{background:var(--green)}
+  .c-media{background:var(--amber)}
+  .c-baja{background:var(--accent)}
 
-  /* ── Confidence dot (budget line assignment) ────────────────── */
-  .conf { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: var(--sp-1); vertical-align: middle; }
-  .c-alta  { background: var(--success); }
-  .c-media { background: var(--warning); }
-  .c-baja  { background: var(--danger); }
+  /* ── Estados de línea (tag e-*) ─────────────────────────────── */
+  .tag.e-dentro{background:var(--green-bg);color:var(--green)}
+  .tag.e-cerca{background:var(--amber-bg);color:var(--amber-tx);border:1px solid var(--amber-bd)}
+  .tag.e-sobre{background:var(--accent);color:#fff}
 
-  /* ── Anomaly rows ───────────────────────────────────────────── */
-  .an { font-size: 0.8125rem; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); margin: var(--sp-1) 0; border: 1px solid; border-left-width: 3px; }
-  .s-critical { background: #FEF2F2; border-color: #FECACA; color: #7F1D1D; }
-  .s-warning  { background: #FFFBEB; border-color: #FCD34D; color: #78350F; }
-  .s-info     { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+  /* ── Anomalías ──────────────────────────────────────────────── */
+  .an{font-size:13px;padding:10px 14px;border-radius:10px;margin:8px 0;border:1px solid;border-left-width:3px;line-height:1.5}
+  .s-critical{background:var(--red-bg);border-color:#f5c2cb;color:#a51427}
+  .s-warning{background:var(--amber-bg);border-color:var(--amber-bd);color:var(--amber-tx)}
+  .s-info{background:var(--card-2);border-color:var(--bd);color:var(--sub)}
+  [data-theme="dark"] .s-critical{color:#ff8a9c}
 
-  /* ── Filter reset link ──────────────────────────────────────── */
-  .filtro { font-size: 0.8125rem; color: var(--accent); cursor: pointer; font-weight: 500; }
-
-  /* ── Upload: 3-box grid ─────────────────────────────────────── */
-  .up3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-5); }
-  @media (max-width: 768px) { .up3 { grid-template-columns: 1fr; } }
-  .upbox { border: 2px dashed var(--border-strong); border-radius: var(--r-lg); padding: var(--sp-6) var(--sp-4); text-align: center; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
-  .upbox:hover { border-color: var(--accent); background: var(--accent-subtle); }
-  .upbox-icon { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--sp-3); }
-  .upbox-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-strong); margin-bottom: var(--sp-1); }
-  .upbox-hint { font-size: 0.75rem; color: var(--text-faint); margin-bottom: var(--sp-4); }
-  .upbox-btn { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2) var(--sp-4); border: 1px solid var(--border); border-radius: var(--r-md); font: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer; color: var(--text); background: var(--surface-1); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
-  .upbox-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
-  .upbox-btn input[type=file] { display: none; }
-  .upbox-file { margin-top: var(--sp-2); font-size: 0.8125rem; color: var(--success); font-weight: 500; }
-  .up-opts { display: flex; gap: var(--sp-5); flex-wrap: wrap; align-items: center; justify-content: center; padding: var(--sp-3) 0 var(--sp-2); border-top: 1px solid var(--border); margin-bottom: var(--sp-4); }
-  .up-opts label { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: var(--sp-2); }
-  .up-action { text-align: center; margin-bottom: var(--sp-2); }
-
-  /* ── Dark mode overrides ────────────────────────────────────── */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) input[type=text],
-    :root:not([data-theme="light"]) input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-    :root:not([data-theme="light"]) select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-    :root:not([data-theme="light"]) .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
-    :root:not([data-theme="light"]) .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
-    :root:not([data-theme="light"]) .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
-  }
-  [data-theme="dark"] input[type=text],[data-theme="dark"] input[type=number] { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-  [data-theme="dark"] select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
-  [data-theme="dark"] .s-critical { background: color-mix(in srgb, var(--danger) 15%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: #FCA5A5; }
-  [data-theme="dark"] .s-warning  { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
-  [data-theme="dark"] .s-info     { background: color-mix(in srgb, var(--info) 15%, transparent); border-color: color-mix(in srgb, var(--info) 40%, transparent); color: #93C5FD; }
+  /* ── Filtro ─────────────────────────────────────────────────── */
+  .filtro{font-size:13px;color:var(--accent);cursor:pointer;font-weight:600}
+  tr.row.sel{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 </style>
 </head>
 <body>
 <header class="topbar">
   <div class="topbar-brand">
-    <img src="/static/logo.png" alt="Gestiona más" class="logo-img"
-         onerror="this.style.display='none';document.getElementById('wm').style.display='flex'"/>
-    <span id="wm" class="wordmark" style="display:none"><span class="g">Gestiona</span><span class="m">más</span></span>
+    <div class="brand-logo">G</div>
+    <span class="wordmark">Gestiona<span>+</span></span>
   </div>
   <nav class="topbar-nav">
-    <a class="nav-tab" href="/">Análisis contable</a>
+    <a class="nav-tab" href="/app">Análisis contable</a>
     <a class="nav-tab active" href="/conciliacion">Conciliación Presupuestaria</a>
   </nav>
   <div class="topbar-actions">
@@ -111,7 +100,7 @@
   </div>
 </header>
 <main>
-  <div class="card">
+  <div class="card pad">
     <div class="up3">
       <div class="upbox">
         <div class="upbox-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
@@ -143,7 +132,7 @@
     <div class="up-action">
       <button class="btn" onclick="conciliar()">Analizar</button>
     </div>
-    <div id="status" class="muted" style="text-align:center;font-size:13px;margin-top:var(--sp-2)"></div>
+    <div id="status" class="muted" style="text-align:center;font-size:13px;margin-top:8px"></div>
   </div>
 
   <div id="resultado" class="hidden">
@@ -159,14 +148,14 @@
           <th class="r">Actuals</th><th class="r">ETC</th><th class="r">%</th><th>Estado</th>
         </tr></thead><tbody id="reporte"></tbody></table></div>
       </div>
-      <div class="card">
+      <div class="card pad">
         <strong>Cola de documentos / revisión</strong>
         <div class="scroll" style="margin-top:8px"><table><thead><tr>
           <th>Doc</th><th>Proveedor</th><th class="r">Total</th><th>Línea</th><th>Reasignar</th>
         </tr></thead><tbody id="cola"></tbody></table></div>
       </div>
     </div>
-    <div class="card">
+    <div class="card pad">
       <strong>Anomalías</strong> <span class="muted" id="nanom"></span>
       <div id="anomalias" style="margin-top:8px"></div>
     </div>

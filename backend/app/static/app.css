@@ -134,6 +134,22 @@ main{position:relative;max-width:1160px;margin:0 auto;padding:32px 40px 80px}
 .filename{font-weight:600;font-size:14.5px;color:var(--tx)}
 .filename .fic{color:var(--accent);margin-right:4px}
 
+/* ── Barra de progreso del análisis ───────────────────────────────────── */
+.progress{max-width:640px;margin:16px auto 0;background:var(--card);border:1px solid var(--bd-soft);
+  border-radius:14px;padding:18px 20px;box-shadow:var(--shadow-card);animation:gmUp .4s ease both}
+.progress-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.progress-file{font-weight:600;font-size:14px;color:var(--tx);display:flex;align-items:center;gap:6px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress-file .fic{color:var(--accent)}
+.progress-pct{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600;flex:none}
+.progress-track{height:8px;border-radius:100px;background:var(--bd-soft);overflow:hidden}
+.progress-fill{position:relative;height:100%;width:0;border-radius:100px;overflow:hidden;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s cubic-bezier(.22,.61,.36,1)}
+.progress-fill::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:gmShimmer 1.1s linear infinite}
+@keyframes gmShimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.progress-step{margin-top:10px;font-size:12.5px;color:var(--mut);font-family:var(--mono)}
+
 /* ── Botones ──────────────────────────────────────────────────────────── */
 .btn-primary{border:none;background:var(--accent);color:#fff;font-family:inherit;font-weight:700;font-size:14px;
   padding:11px 22px;border-radius:10px;cursor:pointer;box-shadow:0 12px 24px -12px rgba(225,24,53,.6);

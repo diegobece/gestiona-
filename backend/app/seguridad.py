@@ -207,6 +207,17 @@ _ESTILO_AUTH = """
  .pie{text-align:center;font-size:12px;color:var(--faint);margin:14px 0 0;font-family:'JetBrains Mono',monospace}
  .ayuda{font-size:12px;color:var(--mut);margin:-12px 0 14px}
  @keyframes gmCardIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+ /* Entrada escalonada: primero salta la G, luego se revela el logotipo y
+    después aparecen los campos. */
+ @keyframes gmLogoIn{0%{opacity:0;transform:scale(.4) rotate(-10deg)}
+  60%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+ @keyframes gmReveal{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+ @keyframes gmUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+ .wm .logo{animation:gmLogoIn .6s cubic-bezier(.34,1.56,.64,1) .12s both}
+ .wm .name{animation:gmReveal .5s ease .5s both}
+ h1{animation:gmUp .5s ease .64s both}
+ .inner>label,.inner>input,.inner>button,.inner>.err,.inner>.alt,.inner>.ayuda,.inner>.pie{
+  animation:gmUp .5s ease .72s both}
 """
 
 
