@@ -99,7 +99,7 @@ def configurar_seguridad(app: FastAPI) -> None:
     @app.get("/logout")
     def logout(request: Request):
         request.session.clear()
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse("/", status_code=303)
 
     # --- Registro autoservicio (con código de invitación) ---------------------
     @app.get("/registro", response_class=HTMLResponse)
@@ -174,13 +174,13 @@ _ESTILO_AUTH = """
   background:radial-gradient(120% 90% at 82% -10%,var(--glow),transparent 55%),linear-gradient(180deg,var(--bg1),var(--bg2));
   margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--tx);
   -webkit-font-smoothing:antialiased}
- .box{position:relative;width:420px;max-width:calc(100% - 32px);background:var(--card);
+ .box{position:relative;z-index:1;width:420px;max-width:calc(100% - 32px);background:var(--card);
   border:1px solid var(--bd);border-radius:20px;
   box-shadow:0 40px 80px -30px rgba(14,20,32,.30),0 4px 14px rgba(14,20,32,.06);
   overflow:hidden;margin:24px;animation:gmCardIn .7s cubic-bezier(.22,.61,.36,1) both}
  .box::before{content:"";display:block;height:4px;background:linear-gradient(90deg,#e11835,#b3122a)}
  .inner{padding:44px 40px 38px}
- .wm{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:8px}
+ .wm{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:8px}
  .wm .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#e11835,#b3122a);
   display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;
   box-shadow:0 8px 16px -8px rgba(225,24,53,.65)}
@@ -207,17 +207,25 @@ _ESTILO_AUTH = """
  .pie{text-align:center;font-size:12px;color:var(--faint);margin:14px 0 0;font-family:'JetBrains Mono',monospace}
  .ayuda{font-size:12px;color:var(--mut);margin:-12px 0 14px}
  @keyframes gmCardIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
- /* Entrada escalonada: primero salta la G, luego se revela el logotipo y
-    después aparecen los campos. */
- @keyframes gmLogoIn{0%{opacity:0;transform:scale(.4) rotate(-10deg)}
-  60%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
- @keyframes gmReveal{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+ /* Entrada: la G aparece grande y centrada, se encoge hasta su sitio y luego
+    se revela el resto del logotipo y los campos. */
+ @keyframes gmLogoIntro{0%{opacity:0;transform:scale(2.3)}38%{opacity:1;transform:scale(2.3)}
+  100%{opacity:1;transform:scale(1)}}
+ @keyframes gmNameIn{from{opacity:0;max-width:0;margin-left:0}to{opacity:1;max-width:240px;margin-left:11px}}
  @keyframes gmUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
- .wm .logo{animation:gmLogoIn .6s cubic-bezier(.34,1.56,.64,1) .12s both}
- .wm .name{animation:gmReveal .5s ease .5s both}
- h1{animation:gmUp .5s ease .64s both}
+ .wm .logo{animation:gmLogoIntro .85s cubic-bezier(.34,1.5,.5,1) .1s both}
+ .wm .name{white-space:nowrap;overflow:hidden;animation:gmNameIn .45s ease .78s both}
+ h1{animation:gmUp .5s ease 1s both}
  .inner>label,.inner>input,.inner>button,.inner>.err,.inner>.alt,.inner>.ayuda,.inner>.pie{
-  animation:gmUp .5s ease .72s both}
+  animation:gmUp .5s ease 1.1s both}
+ /* Fondos difuminados como en la landing */
+ .glow{position:fixed;border-radius:50%;filter:blur(60px);z-index:0;pointer-events:none;
+  animation:gmGlow 7s ease-in-out infinite}
+ .glow.g1{top:-150px;right:-90px;width:480px;height:480px;
+  background:radial-gradient(circle,rgba(225,24,53,.20),transparent 70%)}
+ .glow.g2{bottom:-170px;left:-110px;width:540px;height:540px;
+  background:radial-gradient(circle,rgba(20,40,120,.12),transparent 70%);animation-delay:-3.5s}
+ @keyframes gmGlow{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
 """
 
 
@@ -258,7 +266,8 @@ def _cabecera(titulo: str) -> str:
             f'<link rel="stylesheet" href="/static/fonts_gestiona.css"/>'
             f'<style>{_ESTILO_AUTH}</style>'
             f'{_TEMA_JS}'
-            f'</head><body>{_TEMA_BTN}')
+            f'</head><body>{_TEMA_BTN}'
+            f'<div class="glow g1"></div><div class="glow g2"></div>')
 
 
 def _wm() -> str:
