@@ -3,94 +3,19 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Gestiona más — Análisis contable</title>
-<link rel="stylesheet" href="/static/tokens.css"/>
-<link rel="stylesheet" href="/static/base.css"/>
+<title>Gestiona+ · Análisis contable</title>
+<link rel="stylesheet" href="/static/fonts_gestiona.css"/>
+<link rel="stylesheet" href="/static/app.css"/>
 <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
-<style>
-  /* ── Hero ──────────────────────────────────────────────────── */
-  .hero { text-align: center; padding: var(--sp-10) var(--sp-4) var(--sp-6); }
-  .hero h2 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 var(--sp-3); color: var(--text-strong); font-weight: 700; }
-  .hero h2 .acc { color: var(--accent); }
-  .hero p { font-size: 1rem; color: var(--text-muted); max-width: 640px; margin: 0 auto; line-height: 1.6; }
-
-  /* ── Feature cards ─────────────────────────────────────────── */
-  .features { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin: var(--sp-6) 0 var(--sp-4); }
-  .feat { flex: 1; min-width: 220px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-5); box-shadow: var(--shadow-sm); transition: box-shadow var(--dur-base) var(--ease-out); }
-  .feat:hover { box-shadow: var(--shadow-md); }
-  .feat .ic { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--accent-subtle); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-3); }
-  .feat h3 { margin: 0 0 var(--sp-2); font-size: 0.9375rem; color: var(--text-strong); }
-  .feat p { margin: 0; font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; }
-
-  /* ── Steps ──────────────────────────────────────────────────── */
-  .steps { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin: var(--sp-4) 0 var(--sp-6); }
-  .step { flex: 1; min-width: 200px; display: flex; gap: var(--sp-3); align-items: flex-start; }
-  .step .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.8125rem; }
-  .step h4 { margin: 0 0 var(--sp-1); font-size: 0.875rem; color: var(--text-strong); font-weight: 600; }
-  .step p { margin: 0; font-size: 0.8125rem; color: var(--text-muted); line-height: 1.4; }
-
-  /* ── Upload area ───────────────────────────────────────────── */
-  .uploadwrap { max-width: 680px; margin: var(--sp-2) auto 0; }
-  .filebox { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; justify-content: center; padding: var(--sp-2); }
-  .filename { font-weight: 600; font-size: 0.9375rem; color: var(--text-strong); }
-  .filename .fic { color: var(--accent); margin-right: var(--sp-1); }
-
-  /* ── Movement table (inside detail panel) ──────────────────── */
-  .movs { font-size: 0.8125rem; }
-  .movs th { position: static; background: var(--surface-3); }
-  .movs td { padding: var(--sp-1) var(--sp-2); }
-  .debe  { color: #1D4ED8; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  .haber { color: var(--danger); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  td.right.saldo { color: #DC2626; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-
-  /* ── Confidence label (text, under tag) ────────────────────── */
-  .conf { font-size: 0.6875rem; color: var(--text-faint); margin-top: 2px; }
-
-  /* ── Candidate invoice block ───────────────────────────────── */
-  .cand { border: 1px solid var(--border); background: var(--surface-2); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 var(--sp-3); }
-  .cand h5 { margin: 0 0 var(--sp-2); font-size: 0.8125rem; color: var(--success); font-weight: 600; }
-  .candrow { font-size: 0.8125rem; padding: var(--sp-2) 0; border-top: 1px solid var(--border); }
-  .candrow:first-of-type { border-top: none; }
-  .arrow { color: var(--success); font-weight: 700; margin: 0 var(--sp-2); }
-  .candev { color: var(--text-muted); font-size: 0.75rem; margin-top: var(--sp-1); }
-  .nocand { font-size: 0.75rem; color: var(--text-faint); font-style: italic; margin: var(--sp-1) 0 var(--sp-3); }
-  .senales { margin-top: var(--sp-2); display: flex; gap: var(--sp-1); flex-wrap: wrap; }
-  .canddet { min-height: 30px; }
-
-  /* ── Payment selector chips ────────────────────────────────── */
-  .pgchips { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0 var(--sp-2); }
-  .pgbtn { font: inherit; font-size: 0.8125rem; border: 1px solid var(--border); background: var(--surface-1); border-radius: 100px; padding: var(--sp-1) var(--sp-3); cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
-  .pgbtn:hover { background: var(--surface-2); }
-  .pgbtn.sel { background: #DCFCE7; border-color: var(--success); box-shadow: 0 0 0 2px rgba(22,163,74,.18); color: #166534; }
-  .pgbtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-
-  /* ── Suggested action panel ────────────────────────────────── */
-  .accion { font-size: 0.8125rem; color: #78350F; background: #FFFBEB; border: 1px solid #FCD34D; border-left: 3px solid var(--warning); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); margin: var(--sp-2) 0 var(--sp-3); }
-
-  /* ── Dark mode page-specific overrides ─────────────────────── */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .debe { color: #93C5FD; }
-    :root:not([data-theme="light"]) td.right.saldo { color: #FCA5A5; }
-    :root:not([data-theme="light"]) .cand h5 { color: #86EFAC; }
-    :root:not([data-theme="light"]) .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
-    :root:not([data-theme="light"]) .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
-  }
-  [data-theme="dark"] .debe { color: #93C5FD; }
-  [data-theme="dark"] td.right.saldo { color: #FCA5A5; }
-  [data-theme="dark"] .cand h5 { color: #86EFAC; }
-  [data-theme="dark"] .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
-  [data-theme="dark"] .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
-</style>
 </head>
 <body>
 <header class="topbar">
   <div class="topbar-brand">
-    <img src="/static/logo.png" alt="Gestiona más" class="logo-img"
-         onerror="this.style.display='none';document.getElementById('wm').style.display='flex'"/>
-    <span id="wm" class="wordmark" style="display:none"><span class="g">Gestiona</span><span class="m">más</span></span>
+    <div class="brand-logo">G</div>
+    <span class="wordmark">Gestiona<span>+</span></span>
   </div>
   <nav class="topbar-nav">
-    <a class="nav-tab active" href="/">Análisis contable</a>
+    <a class="nav-tab active" href="/app">Análisis contable</a>
     <a class="nav-tab" href="/conciliacion">Conciliación Presupuestaria</a>
   </nav>
   <div class="topbar-actions">
@@ -102,9 +27,10 @@
   <!-- Landing (se oculta al mostrar resultados) -->
   <div id="landing">
     <section class="hero">
+      <div class="pill"><span class="dot"></span>Motor determinista y auditable</div>
       <h2>Análisis contable <span class="acc">preciso y auditable</span></h2>
-      <p>Sube tu Libro Mayor y detecta pagos sin factura y facturas sin pago con un motor
-         determinista y auditable. Afirma solo lo que puede probar; lo dudoso, a revisión humana.</p>
+      <p>Sube tu Libro Mayor y detecta pagos sin factura y facturas sin pago. Afirma solo
+         lo que puede probar; lo dudoso, a revisión humana.</p>
     </section>
 
     <section class="features">
@@ -124,29 +50,31 @@
   </div>
 
   <div class="uploadwrap" id="cargar">
-    <div class="card">
-      <div id="drop" class="drop">
-        <div class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg></div>
-        <div class="big">Sube el Libro Mayor (Fichas de Mayor)</div>
-        <span class="muted">Arrastra aquí tu archivo o haz clic · Excel (.xlsx) o PDF</span>
-        <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.pdf" class="hidden"/>
+    <div id="drop" class="drop">
+      <div class="ico">
+        <span class="ring"></span>
+        <div class="box"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 18V7M13 7L8.5 11.5M13 7l4.5 4.5" stroke="#e11835" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18v2.5h16V18" stroke="#e11835" stroke-width="2" stroke-linecap="round"/></svg></div>
       </div>
-      <div id="confirmar" class="hidden" style="margin-top:14px">
-        <div class="filebox">
-          <span class="filename"><span id="fname"></span></span>
-          <button class="btn-ghost" onclick="cambiarArchivo()">Cambiar archivo</button>
-          <button class="btn-primary" onclick="iniciarAnalisis()">Iniciar análisis</button>
-        </div>
-        <div class="filebox" style="margin-top:10px">
-          <span class="filename">Extracto bancario <span class="muted">(opcional)</span>: <span id="fnameBanco" class="muted">ninguno</span></span>
-          <input id="fileBanco" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden"/>
-          <button class="btn-ghost" onclick="document.getElementById('fileBanco').click()">Añadir extracto</button>
-          <button class="btn-ghost hidden" id="btnQuitarBanco" onclick="quitarBanco()">Quitar</button>
-        </div>
-        <div class="muted" style="margin-top:6px;font-size:.8rem">Añade el extracto del banco (Excel/CSV) para cruzarlo con los pagos y detectar <strong>pagos del banco sin registro contable</strong> sin duplicar los ya registrados.</div>
-      </div>
-      <div id="status" class="muted" style="margin-top:10px;text-align:center"></div>
+      <div class="big">Sube el Libro Mayor (Fichas de Mayor)</div>
+      <div class="sub">Arrastra aquí tu archivo o haz clic · Excel (.xlsx) o PDF</div>
+      <div class="cta">Seleccionar archivo</div>
+      <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.pdf" class="hidden"/>
     </div>
+    <div id="confirmar" class="hidden" style="margin-top:16px">
+      <div class="filebox">
+        <span class="filename"><span class="fic">▣</span><span id="fname"></span></span>
+        <button class="btn-ghost" onclick="cambiarArchivo()">Cambiar archivo</button>
+        <button class="btn-primary" onclick="iniciarAnalisis()">Iniciar análisis</button>
+      </div>
+      <div class="filebox" style="margin-top:10px">
+        <span class="filename" style="font-weight:500;color:var(--sub)">Extracto bancario <span class="muted">(opcional)</span>: <span id="fnameBanco" class="muted">ninguno</span></span>
+        <input id="fileBanco" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden"/>
+        <button class="btn-ghost" onclick="document.getElementById('fileBanco').click()">Añadir extracto</button>
+        <button class="btn-ghost hidden" id="btnQuitarBanco" onclick="quitarBanco()">Quitar</button>
+      </div>
+      <div class="muted" style="margin-top:8px;font-size:13px;text-align:center;max-width:640px;margin-left:auto;margin-right:auto">Añade el extracto del banco (Excel/CSV) para cruzarlo con los pagos y detectar <strong>pagos del banco sin registro contable</strong> sin duplicar los ya registrados.</div>
+    </div>
+    <div id="status" class="muted" style="margin-top:12px;text-align:center"></div>
   </div>
 
   <div id="result" class="hidden">

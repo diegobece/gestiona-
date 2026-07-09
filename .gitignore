@@ -32,6 +32,10 @@ env/
 node_modules/
 npm-debug.log*
 
+# Bundles de diseño exportados (fuente de referencia, no build)
+Gestiona+*.html
+cookies.txt
+
 # OS / editor
 .DS_Store
 Thumbs.db

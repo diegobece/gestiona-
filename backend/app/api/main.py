@@ -60,7 +60,14 @@ _FSP = "::fsp"
 
 
 @app.get("/", response_class=HTMLResponse)
+def landing() -> HTMLResponse:
+    """Página pública de inicio (landing). No requiere sesión."""
+    return HTMLResponse((_STATIC / "landing.html").read_text(encoding="utf-8"))
+
+
+@app.get("/app", response_class=HTMLResponse)
 def index() -> HTMLResponse:
+    """Aplicación (protegida por login)."""
     return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
 
 

@@ -27,8 +27,14 @@ def test_hash_verifica_y_rechaza():
     assert h != hash_password("secreta123")  # salt distinto cada vez
 
 
-def test_home_sin_login_redirige():
-    r = cliente.get("/")
+def test_landing_publica():
+    # La home / es la landing pública (no requiere sesión).
+    assert cliente.get("/").status_code == 200
+
+
+def test_app_sin_login_redirige():
+    # La app (/app) sí está protegida: sin sesión redirige a /login.
+    r = cliente.get("/app")
     assert r.status_code == 303
     assert r.headers["location"] == "/login"
 
@@ -48,11 +54,11 @@ def test_login_valido_da_acceso():
     c = TestClient(app)  # sigue redirecciones
     r = c.post("/login", data={"usuario": "admin", "password": "admin"})
     assert r.status_code == 200
-    # Con sesión, la home ya responde 200.
-    assert c.get("/").status_code == 200
-    # Y logout corta el acceso.
+    # Con sesión, la app (/app) ya responde 200.
+    assert c.get("/app").status_code == 200
+    # Y logout corta el acceso a la app.
     c.get("/logout")
-    assert TestClient(app, follow_redirects=False).get("/").status_code == 303
+    assert TestClient(app, follow_redirects=False).get("/app").status_code == 303
 
 
 def test_health_es_publico():
@@ -86,7 +92,7 @@ def test_registro_valido_crea_y_permite_login():
         "usuario": user, "password": "clave1234", "password2": "clave1234",
         "codigo": "gestiona-demo"})  # código por defecto en dev
     assert r.status_code == 200
-    assert c.get("/").status_code == 200          # queda con sesión iniciada
+    assert c.get("/app").status_code == 200        # queda con sesión iniciada
     # Y puede volver a entrar luego (cuenta guardada).
     c2 = TestClient(app)
     assert c2.post("/login", data={"usuario": user, "password": "clave1234"}).status_code == 200

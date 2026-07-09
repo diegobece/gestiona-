@@ -22,6 +22,9 @@ from .usuarios import store as usuario_store, usuario_valido
 # Rutas accesibles sin iniciar sesión.
 _PUBLICAS = ("/login", "/logout", "/registro", "/health", "/static", "/favicon")
 
+# Rutas exactas públicas (no por prefijo): la landing de inicio.
+_PUBLICAS_EXACTAS = ("/",)
+
 
 def _hash_de(usuario: str) -> str | None:
     """Hash de la contraseña: primero la BD de registrados, luego el respaldo."""
@@ -41,7 +44,8 @@ def _usuario_ocupado(usuario: str) -> bool:
 
 
 def _es_publica(path: str) -> bool:
-    return any(path == p or path.startswith(p + "/") or path == p for p in _PUBLICAS) \
+    return path in _PUBLICAS_EXACTAS \
+        or any(path == p or path.startswith(p + "/") for p in _PUBLICAS) \
         or path.startswith("/static")
 
 
@@ -79,7 +83,7 @@ def configurar_seguridad(app: FastAPI) -> None:
     @app.get("/login", response_class=HTMLResponse)
     def login_form(request: Request):
         if request.session.get("user"):
-            return RedirectResponse("/", status_code=303)
+            return RedirectResponse("/app", status_code=303)
         return HTMLResponse(_pagina_login())
 
     @app.post("/login", response_class=HTMLResponse)
@@ -89,7 +93,7 @@ def configurar_seguridad(app: FastAPI) -> None:
             request.session.clear()
             request.session["user"] = usuario
             request.session["t"] = time.time()
-            return RedirectResponse("/", status_code=303)
+            return RedirectResponse("/app", status_code=303)
         return HTMLResponse(_pagina_login(error=True), status_code=401)
 
     @app.get("/logout")
@@ -103,7 +107,7 @@ def configurar_seguridad(app: FastAPI) -> None:
         if not config.REGISTRO_HABILITADO:
             return HTMLResponse(_pagina_registro_off())
         if request.session.get("user"):
-            return RedirectResponse("/", status_code=303)
+            return RedirectResponse("/app", status_code=303)
         return HTMLResponse(_pagina_registro())
 
     @app.post("/registro", response_class=HTMLResponse)
@@ -132,7 +136,7 @@ def configurar_seguridad(app: FastAPI) -> None:
         request.session.clear()
         request.session["user"] = usuario
         request.session["t"] = time.time()
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     @app.get("/health")
     def health():
@@ -154,34 +158,55 @@ def _cabeceras_seguridad(resp) -> None:
 
 _ESTILO_AUTH = """
  *{box-sizing:border-box}
- body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--surface-1);
-  margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--text)}
- .box{background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-xl);
-  border-top:3px solid var(--accent);padding:32px;width:360px;box-shadow:var(--shadow-lg);margin:24px}
- .wm{text-align:center;margin-bottom:4px;line-height:1}
- .wm .g{font-family:Georgia,serif;font-weight:700;color:var(--accent);font-size:28px}
- .wm .m{font-family:'Segoe Script','Brush Script MT',cursive;color:var(--accent);font-size:29px;margin-left:3px;position:relative;top:4px}
- h1{font-size:0.875rem;font-weight:500;text-align:center;color:var(--text-muted);margin:0 0 20px}
- label{display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
-  color:var(--text-muted);margin:14px 0 4px}
- input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--r-md);
-  font:inherit;font-size:0.9375rem;background:var(--surface-1);color:var(--text);
-  transition:border-color 120ms;outline:none}
- input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
- button[type=submit]{width:100%;margin-top:20px;background:var(--accent);color:#fff;border:none;
-  border-radius:var(--r-md);padding:11px;font:inherit;font-size:0.9375rem;font-weight:600;cursor:pointer;
-  transition:background 120ms}
- button[type=submit]:hover{background:var(--accent-hover)}
- button[type=submit]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
- .err{background:#FEF2F2;border:1px solid #FECACA;border-left:3px solid var(--accent);color:#7F1D1D;
-  border-radius:var(--r-md);padding:9px 12px;font-size:0.8125rem;margin-bottom:12px}
- .alt{text-align:center;font-size:0.8125rem;color:var(--text-muted);margin-top:14px}
- .alt a{color:var(--accent);text-decoration:none;font-weight:600}
- .pie{text-align:center;color:var(--text-faint);font-size:0.75rem;margin-top:14px}
- .ayuda{font-size:0.75rem;color:var(--text-faint);margin-top:4px}
- @media(prefers-color-scheme:dark){
-  .err{background:color-mix(in srgb,var(--danger) 15%,transparent);
-   border-color:color-mix(in srgb,var(--danger) 40%,transparent);color:#FCA5A5}}
+ :root{--bg1:#fbfcfe;--bg2:#eef1f6;--glow:rgba(225,24,53,.07);--card:#fff;--bd:#e6eaf0;
+  --ibd:#e0e5ec;--ibg:#fbfcfe;--tx:#0e1420;--mut:#8a94a6;--sub:#48546a;--faint:#aab2c0;
+  --errbg:#fdeaed;--errbd:#f5c2cb;--errtx:#a51427}
+ @media(prefers-color-scheme:dark){:root{--bg1:#141a24;--bg2:#0b0f17;--glow:rgba(225,24,53,.12);
+  --card:#161c26;--bd:#252c38;--ibd:#2a323f;--ibg:#0f141d;--tx:#e6eaf0;--mut:#8792a4;--sub:#aab4c4;
+  --faint:#5c6675;--errbg:#2a1418;--errbd:#5c2530;--errtx:#ff8a9c}}
+ :root[data-theme="dark"]{--bg1:#141a24;--bg2:#0b0f17;--glow:rgba(225,24,53,.12);--card:#161c26;
+  --bd:#252c38;--ibd:#2a323f;--ibg:#0f141d;--tx:#e6eaf0;--mut:#8792a4;--sub:#aab4c4;--faint:#5c6675;
+  --errbg:#2a1418;--errbd:#5c2530;--errtx:#ff8a9c}
+ :root[data-theme="light"]{--bg1:#fbfcfe;--bg2:#eef1f6;--glow:rgba(225,24,53,.07);--card:#fff;
+  --bd:#e6eaf0;--ibd:#e0e5ec;--ibg:#fbfcfe;--tx:#0e1420;--mut:#8a94a6;--sub:#48546a;--faint:#aab2c0;
+  --errbg:#fdeaed;--errbd:#f5c2cb;--errtx:#a51427}
+ body{font-family:'Plus Jakarta Sans',system-ui,-apple-system,Arial,sans-serif;
+  background:radial-gradient(120% 90% at 82% -10%,var(--glow),transparent 55%),linear-gradient(180deg,var(--bg1),var(--bg2));
+  margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--tx);
+  -webkit-font-smoothing:antialiased}
+ .box{position:relative;width:420px;max-width:calc(100% - 32px);background:var(--card);
+  border:1px solid var(--bd);border-radius:20px;
+  box-shadow:0 40px 80px -30px rgba(14,20,32,.30),0 4px 14px rgba(14,20,32,.06);
+  overflow:hidden;margin:24px;animation:gmCardIn .7s cubic-bezier(.22,.61,.36,1) both}
+ .box::before{content:"";display:block;height:4px;background:linear-gradient(90deg,#e11835,#b3122a)}
+ .inner{padding:44px 40px 38px}
+ .wm{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:8px}
+ .wm .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#e11835,#b3122a);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;
+  box-shadow:0 8px 16px -8px rgba(225,24,53,.65)}
+ .wm .name{font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--tx)}
+ .wm .name span{color:#e11835}
+ h1{text-align:center;font-size:14px;color:var(--mut);margin:0 0 30px;font-weight:500}
+ label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--mut);
+  text-transform:uppercase;margin:0 0 8px}
+ input{width:100%;padding:13px 15px;border:1px solid var(--ibd);border-radius:11px;background:var(--ibg);
+  margin-bottom:20px;outline:none;font:inherit;font-size:15px;color:var(--tx);
+  transition:border-color .18s,background .18s,box-shadow .18s}
+ input:focus{border-color:#e11835;background:var(--card);box-shadow:0 0 0 3px rgba(225,24,53,.14)}
+ input::placeholder{color:var(--faint)}
+ button[type=submit]{width:100%;padding:14px;border:none;border-radius:11px;background:#e11835;color:#fff;
+  font-weight:700;font-size:15.5px;font-family:inherit;cursor:pointer;margin-top:6px;
+  box-shadow:0 14px 26px -12px rgba(225,24,53,.6);transition:background .18s,transform .12s}
+ button[type=submit]:hover{background:#c0122a}
+ button[type=submit]:active{transform:scale(.99)}
+ button[type=submit]:focus-visible{outline:2px solid #e11835;outline-offset:2px}
+ .err{background:var(--errbg);border:1px solid var(--errbd);color:var(--errtx);border-radius:11px;
+  padding:11px 14px;font-size:13px;margin-bottom:18px;font-weight:500}
+ .alt{text-align:center;font-size:14px;color:var(--sub);margin:24px 0 0}
+ .alt a{color:#e11835;text-decoration:none;font-weight:700}
+ .pie{text-align:center;font-size:12px;color:var(--faint);margin:14px 0 0;font-family:'JetBrains Mono',monospace}
+ .ayuda{font-size:12px;color:var(--mut);margin:-12px 0 14px}
+ @keyframes gmCardIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
 """
 
 
@@ -217,15 +242,17 @@ _TEMA_BTN = (
 def _cabecera(titulo: str) -> str:
     return (f'<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>'
             f'<meta name="viewport" content="width=device-width, initial-scale=1"/>'
-            f'<title>{titulo} · Gestiona más</title>'
+            f'<title>{titulo} · Gestiona+</title>'
             f'<link rel="stylesheet" href="/static/tokens.css"/>'
+            f'<link rel="stylesheet" href="/static/fonts_gestiona.css"/>'
             f'<style>{_ESTILO_AUTH}</style>'
             f'{_TEMA_JS}'
             f'</head><body>{_TEMA_BTN}')
 
 
 def _wm() -> str:
-    return '<div class="wm"><span class="g">Gestiona</span><span class="m">más</span></div>'
+    return ('<div class="wm"><div class="logo">G</div>'
+            '<div class="name">Gestiona<span>+</span></div></div>')
 
 
 def _pagina_login(error: bool = False) -> str:
@@ -234,16 +261,18 @@ def _pagina_login(error: bool = False) -> str:
             if config.REGISTRO_HABILITADO else "")
     return f"""{_cabecera('Acceso')}
  <form class="box" method="post" action="/login">
+  <div class="inner">
    {_wm()}
-   <h1>Análisis contable — acceso privado</h1>
+   <h1>Tu gestoría, en piloto automático</h1>
    {aviso}
    <label for="usuario">Usuario</label>
-   <input id="usuario" name="usuario" autocomplete="username" autofocus required/>
+   <input id="usuario" name="usuario" placeholder="nombre@empresa.com" autocomplete="username" autofocus required/>
    <label for="password">Contraseña</label>
-   <input id="password" name="password" type="password" autocomplete="current-password" required/>
+   <input id="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" required/>
    <button type="submit">Entrar</button>
    {alta}
    <div class="pie">Acceso restringido · datos confidenciales</div>
+  </div>
  </form>
 </body></html>"""
 
@@ -252,20 +281,22 @@ def _pagina_registro(error: str | None = None) -> str:
     aviso = f'<div class="err">{error}</div>' if error else ""
     return f"""{_cabecera('Crear cuenta')}
  <form class="box" method="post" action="/registro">
+  <div class="inner">
    {_wm()}
-   <h1>Crear cuenta</h1>
+   <h1>Crea tu cuenta en Gestiona+</h1>
    {aviso}
    <label for="usuario">Usuario</label>
-   <input id="usuario" name="usuario" autocomplete="username" autofocus required/>
+   <input id="usuario" name="usuario" placeholder="nombre@empresa.com" autocomplete="username" autofocus required/>
    <label for="password">Contraseña</label>
-   <input id="password" name="password" type="password" autocomplete="new-password" required/>
+   <input id="password" name="password" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required/>
    <label for="password2">Repite la contraseña</label>
-   <input id="password2" name="password2" type="password" autocomplete="new-password" required/>
+   <input id="password2" name="password2" type="password" placeholder="••••••••" autocomplete="new-password" required/>
    <label for="codigo">Código de invitación</label>
-   <input id="codigo" name="codigo" required/>
+   <input id="codigo" name="codigo" placeholder="Código de acceso" required/>
    <div class="ayuda">Te lo facilita el administrador de la plataforma.</div>
    <button type="submit">Crear cuenta y entrar</button>
    <div class="alt">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></div>
+  </div>
  </form>
 </body></html>"""
 
@@ -273,10 +304,12 @@ def _pagina_registro(error: str | None = None) -> str:
 def _pagina_registro_off() -> str:
     return f"""{_cabecera('Registro')}
  <div class="box">
+  <div class="inner">
    {_wm()}
    <h1>Registro no habilitado</h1>
-   <p class="ayuda" style="text-align:center;font-size:13px">El alta de cuentas está
+   <p class="ayuda" style="text-align:center;font-size:13px;margin:0 0 6px">El alta de cuentas está
    desactivada. Pide acceso al administrador de la plataforma.</p>
    <div class="alt"><a href="/login">Volver al acceso</a></div>
+  </div>
  </div>
 </body></html>"""
