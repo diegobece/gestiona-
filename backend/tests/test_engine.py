@@ -36,15 +36,17 @@ def test_pagos_sin_facturas_es_alta_confianza():
     assert r.num_facturas == 0
 
 
-# --- §9.2: sobrepagada con muchas facturas pequeñas -> REVISAR, nunca afirma -
-def test_sobrepagada_con_facturas_va_a_revisar():
-    movs = [factura("4100061", 10) for _ in range(20)]  # 200 en facturas
-    movs += [pago("4100061", 150), pago("4100061", 120)]  # 270 en pagos (batch)
-    inf = motor.analizar(libro(*movs))
+# --- §9.2: pago AGRUPADO que suma varias facturas -> conciliado (v2) ----------
+def test_pago_agrupado_se_concilia():
+    # Un pago liquida tres facturas de una vez (40+60+100 = 200): el conciliador
+    # por subconjuntos lo reconoce y NO lo marca como pago sin factura.
+    inf = motor.analizar(libro(
+        factura("4100061", 40), factura("4100061", 60), factura("4100061", 100),
+        pago("4100061", 200),
+    ))
     r = _res(inf, "4100061")
-    assert r.clasificacion == Clasificacion.REVISAR
-    assert r.clasificacion != Clasificacion.SIN_FACTURA_ALTA_CONFIANZA
-    assert r.confianza == Confianza.NA  # NO se afirma
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert r.importe_sospechoso == Decimal("0.00")
 
 
 # --- §9.3: abonos negativos + pagos netos que cuadra -> 0 afirmadas ---------
@@ -167,30 +169,122 @@ def _sub(inf, codigo):
     return r.subcategoria
 
 
-def test_sub_arrastre_abre_pagando_sin_estar_a_credito():
-    # Pago antes de cualquier factura: la cuenta nunca estuvo a crédito.
+def test_arrastre_abre_pagando_se_concilia():
+    # Abre pagando (pago antes de la 1ª factura): ese pago liquida una factura del
+    # año anterior. El conciliador lo trata como factura virtual -> CONCILIADA,
+    # sin afirmar nada (no es pago sin factura, la factura existe en el año previo).
     inf = motor.analizar(libro(
         pago("4000001", 100), factura("4000001", 40),
     ))
-    assert _sub(inf, "4000001") == SubcategoriaRevisar.ARRASTRE_EJERCICIO_ANTERIOR.value
+    r = _res(inf, "4000001")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
 
 
-def test_sub_desfase_de_corte_ultimo_pago_explica_el_debito():
-    # Estuvo a crédito; termina en débito explicable por el último pago.
+def test_pago_huerfano_en_cuenta_infrapagada_es_conciliada_en_pagos():
+    # Cuenta que en NETO aún debe dinero (infrapagada: Σ Haber > Σ Debe). Aquí es
+    # IMPOSIBLE que haya un pago sin factura: si se ha facturado más de lo pagado,
+    # todos los pagos tienen factura. Por eso NO aparece en 'pagos sin factura'
+    # (ni a revisar): es CONCILIADA en este análisis. Lo pendiente (la factura de
+    # 300 sin pagar) se trata en el análisis inverso 'facturas sin pago'.
     inf = motor.analizar(libro(
-        factura("4000014", 100), pago("4000014", 100),
-        factura("4000014", 30), pago("4000014", 80),
+        factura("4000014", 100), pago("4000014", 100),  # casa 1:1
+        pago("4000014", 185),                           # no casa: ¿parcial?
+        factura("4000014", 300),                        # queda sin pagar
     ))
-    assert _sub(inf, "4000014") == SubcategoriaRevisar.DESFASE_DE_CORTE.value
+    r = _res(inf, "4000014")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
+    assert r.importe_sospechoso == Decimal("0.00")  # no se afirma nada
 
 
-def test_sub_sobrepago_estructural_excede_ultimo_pago():
-    # Estuvo a crédito pero el débito final supera al último pago.
+def test_pago_agrupado_con_descuadre_menor_tolerancia_se_concilia():
+    # Un pago agrupado con un descuadre de céntimos (< 3€) se concilia igualmente.
     inf = motor.analizar(libro(
-        factura("4100145", 50), pago("4100145", 50),
-        pago("4100145", 40), pago("4100145", 30),
+        factura("4100145", 42.35), factura("4100145", 30.25),
+        pago("4100145", 72.60),                          # 42.35+30.25 exacto
+        factura("4100145", 50), pago("4100145", 51.50),  # descuadre 1.50 < 3€
     ))
-    assert _sub(inf, "4100145") == SubcategoriaRevisar.SOBREPAGO_REVISAR.value
+    r = _res(inf, "4100145")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+
+
+# --- Regla del saldo final: sobrepago CONFIRMADO -> SIN_FACTURA -------------
+def test_sobrepago_confirmado_pasa_a_sin_factura():
+    # Concilia la factura (a crédito y de vuelta a 0) y luego 2 pagos finales sin
+    # factura cuyo importe == exceso: factura confirmada ausente -> alta confianza.
+    inf = motor.analizar(libro(
+        factura("4100200", 50), pago("4100200", 50),
+        pago("4100200", 40), pago("4100200", 30),
+    ))
+    r = _res(inf, "4100200")
+    assert r.clasificacion == Clasificacion.SIN_FACTURA_ALTA_CONFIANZA
+    assert r.confianza == Confianza.ALTA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" in r.flags
+    assert r.importe_sospechoso == Decimal("70.00")
+
+
+def test_sobrepago_confirmado_con_pago_huerfano_en_medio():
+    # Réplica de 4100106: concilia varias facturas, un pago sin factura EN MEDIO
+    # (no al final), y luego otra factura con su pago. Las facturas se cubren con
+    # pagos enteros y sobra el pago huérfano = exceso -> SIN_FACTURA alta confianza.
+    inf = motor.analizar(libro(
+        factura("4100206", 285), pago("4100206", 285),
+        pago("4100206", 261),                       # huérfano, en medio
+        factura("4100206", 301), pago("4100206", 301),
+    ))
+    r = _res(inf, "4100206")
+    assert r.clasificacion == Clasificacion.SIN_FACTURA_ALTA_CONFIANZA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" in r.flags
+    assert r.importe_sospechoso == Decimal("261.00")
+
+
+def test_abre_pagando_se_concilia_aunque_llegue_a_credito():
+    # Réplica de FAN CLIMA: abre con un PAGO (factura del año anterior); el resto
+    # opera normal. El pago inicial es arrastre (factura virtual) y el resto casa
+    # 1:1 -> CONCILIADA, sin afirmar nada.
+    inf = motor.analizar(libro(
+        pago("4100304", 320),                       # abre pagando (arrastre)
+        factura("4100304", 320), pago("4100304", 320),
+        factura("4100304", 1768), pago("4100304", 1768),
+    ))
+    r = _res(inf, "4100304")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
+
+
+def test_residuo_menor_tolerancia_se_concilia():
+    # Un pago cuadra su factura y sobra un residuo de 0,15 € (< 3€): se da por
+    # conciliado, no se afirma ni se manda a revisar.
+    inf = motor.analizar(libro(
+        factura("4100303", 50), pago("4100303", 50), pago("4100303", "0.15"),
+    ))
+    r = _res(inf, "4100303")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
+
+
+def test_arrastre_multiples_pagos_apertura_se_concilia():
+    # Abre con dos pagos antes de la 1ª factura (arrastre): ambos se tratan como
+    # facturas virtuales del año anterior -> CONCILIADA, no se afirma.
+    inf = motor.analizar(libro(
+        pago("4100301", 60), pago("4100301", 40), factura("4100301", 60),
+    ))
+    r = _res(inf, "4100301")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
+
+
+def test_abono_rectificativa_neta_la_factura_se_concilia():
+    # Una rectificativa (abono) reduce la factura: pago = factura − abono. El
+    # conciliador lo reconoce (100 − 30 = 70) -> CONCILIADA, sin afirmar.
+    inf = motor.analizar(libro(
+        factura("4100302", 100), factura("4100302", 30, abono=True),
+        pago("4100302", 70),
+    ))
+    r = _res(inf, "4100302")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
 
 
 def test_sub_credito_no_identificado_sin_facturas_reales():
@@ -201,12 +295,17 @@ def test_sub_credito_no_identificado_sin_facturas_reales():
     assert _sub(inf, "4100215") == SubcategoriaRevisar.CREDITO_NO_IDENTIFICADO.value
 
 
-def test_sub_distorsion_por_abono_tiene_prioridad():
+def test_abono_no_usado_no_estorba_la_conciliacion():
+    # Los pagos casan 1:1 con sus facturas y sobra un abono no aplicado (un crédito
+    # pendiente): eso NO es un pago sin factura -> CONCILIADA.
     inf = motor.analizar(libro(
-        factura("4000009", 100), factura("4000009", 50, abono=True),
-        pago("4000009", 80),
+        factura("4000009", 50), pago("4000009", 50),
+        factura("4000009", 30), pago("4000009", 30),
+        factura("4000009", 20, abono=True),
     ))
-    assert _sub(inf, "4000009") == SubcategoriaRevisar.DISTORSION_POR_ABONO.value
+    r = _res(inf, "4000009")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
 
 
 def test_sub_factura_en_otra_cuenta_degrada_sin_factura():

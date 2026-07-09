@@ -31,6 +31,7 @@ from ..domain.models import (
 )
 from ..domain.resultados import Informe, ResultadoCuenta, Resumen
 from .candidatos import buscar_candidatas
+from .conciliador import TOLERANCIA_DESCUADRE, conciliar_cuenta
 from .proveedores import buscar_en_otras_cuentas, normalizar
 
 
@@ -252,10 +253,65 @@ class MotorDeteccion:
                 codigo, nombre, Clasificacion.SIN_FACTURA_ALTA_CONFIANZA, confianza,
                 motivo, suma_debe, suma_haber, saldo_reconstruido, saldo_reportado,
                 n_fact, n_pago, n_abono, tuple(flags), movs,
+                pagos_sin_factura=tuple(
+                    m for m in movs if m.tipo == TipoMovimiento.PAGO),
             )
 
-        # REVISAR: sobrepagada (Σ Debe > Σ Haber) pero CON facturas.
-        # Probable pago agrupado/parcial/arrastre. NO se afirma.
+        # Conciliación fina por subconjuntos (v2): un pago puede liquidar un GRUPO
+        # de facturas (pago agrupado). Los pagos que no casan con ninguna factura ni
+        # grupo de facturas son HUÉRFANOS = pago sin factura CONFIRMADO, aunque la
+        # cuenta esté infrapagada en neto (el huérfano queda oculto entre las deudas).
+        # Descuadres < tolerancia se dan por conciliados. Los guardarraíles (abonos,
+        # abre-pagando) están dentro de conciliar_cuenta (devuelve None).
+        huerfanos = conciliar_cuenta(movs)
+        if huerfanos is not None:
+            suma_huerf = _suma(m.debe for m in huerfanos)
+            exceso_neto = (suma_debe - suma_haber).quantize(Decimal("0.01"))
+            asientos = ", ".join(sorted({m.asiento for m in huerfanos if m.asiento}))
+
+            # SOLO se afirma en cuentas SOBREPAGADAS (Σ Debe > Σ Haber) y con pagos
+            # concretos sin casar. El exceso neto es dinero pagado por encima de TODO
+            # lo facturado, que ninguna factura —ni un pago parcial— puede respaldar.
+            if exceso_neto >= TOLERANCIA_DESCUADRE and suma_huerf >= TOLERANCIA_DESCUADRE:
+                importe = min(suma_huerf, exceso_neto)
+                return self._resultado(
+                    codigo, nombre, Clasificacion.SIN_FACTURA_ALTA_CONFIANZA,
+                    Confianza.ALTA,
+                    f"Conciliación fina: los pagos casan con sus facturas (incluidos "
+                    f"pagos agrupados y parciales), pero se pagaron {importe} € por "
+                    f"encima de todo lo facturado (asiento(s) {asientos}). Ese exceso "
+                    f"no lo respalda ninguna factura. Pago sin factura confirmado.",
+                    suma_debe, suma_haber, saldo_reconstruido, saldo_reportado,
+                    n_fact, n_pago, n_abono,
+                    tuple(list(flags) + ["PAGO_SIN_FACTURA_CONFIRMADO"]), movs,
+                    importe_sin_factura_confirmado=importe,
+                    pagos_sin_factura=tuple(huerfanos),
+                )
+
+            # Cuenta que DEBE dinero neto (Σ Haber ≥ Σ Debe): todos los pagos están
+            # respaldados por facturas (no puede haber pago sin factura cuando se ha
+            # facturado igual o más de lo pagado). Lo pendiente es una FACTURA sin
+            # pagar y se trata en el análisis inverso "Facturas sin pago" — aquí NO
+            # debe aparecer a revisar. CONCILIADA.
+            if exceso_neto < CERO:
+                motivo = (
+                    f"La cuenta debe dinero neto (Σ Haber {suma_haber} € > Σ Debe "
+                    f"{suma_debe} €): todos los pagos están respaldados por facturas. "
+                    f"Sin pago sin factura; lo pendiente se ve en 'Facturas sin pago'.")
+            else:
+                # Sobrepago/cuadre explicado por abonos o arrastre, sin pagos sueltos.
+                motivo = (
+                    "Conciliación fina: todos los pagos casan con sus facturas "
+                    "(agrupados/parciales); los descuadres bajo tolerancia y los "
+                    "abonos/arrastre no dejan ningún pago sin factura. Sin alerta.")
+            return self._resultado(
+                codigo, nombre, Clasificacion.CONCILIADA, Confianza.NA, motivo,
+                suma_debe, suma_haber, saldo_reconstruido, saldo_reportado,
+                n_fact, n_pago, n_abono, tuple(flags), movs,
+            )
+
+        # Cuenta NO apta para conciliación fina (tiene abonos o abre pagando).
+        # REVISAR: sobrepagada (Σ Debe > Σ Haber) pero CON facturas. NO se afirma.
         if suma_debe > suma_haber + self.tolerancia:
             exceso = (suma_debe - suma_haber).quantize(Decimal("0.01"))
             sub, sub_motivo = self._subclasificar_revisar(
@@ -385,6 +441,7 @@ class MotorDeteccion:
         codigo, nombre, clasificacion, confianza, motivo, suma_debe, suma_haber,
         saldo_reconstruido, saldo_reportado, n_fact, n_pago, n_abono, flags, movs,
         subcategoria=None, subcategoria_motivo="", candidatos=(),
+        importe_sin_factura_confirmado=None, pagos_sin_factura=(),
     ) -> ResultadoCuenta:
         return ResultadoCuenta(
             codigo_cuenta=codigo,
@@ -404,6 +461,8 @@ class MotorDeteccion:
             candidatos=candidatos,
             flags=flags,
             movimientos=movs,
+            importe_sin_factura_confirmado=importe_sin_factura_confirmado,
+            pagos_sin_factura=pagos_sin_factura,
         )
 
     @staticmethod

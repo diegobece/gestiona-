@@ -46,6 +46,11 @@ from ..domain.resultados import (
 from .detector import es_cuenta_proveedor_acreedor, es_cuenta_tecnica
 
 
+# Sin fecha de vencimiento, una factura sin pagar se considera "reciente" (aún en
+# plazo, no preocupa) si tiene como mucho estos días desde la fecha de corte.
+DIAS_RECIENTE = 60
+
+
 class MotorFacturasSinPago:
     """Detección de facturas sin pago por cuenta. Stateless entre llamadas."""
 
@@ -131,10 +136,27 @@ class MotorFacturasSinPago:
                 f"(puede ser deuda viva normal o pago pendiente).",
                 pendiente=suma_haber, facturas=facturas)
 
-        # REVISAR: infrapagada (queda saldo acreedor) pero con algún pago.
+        # Infrapagada (queda saldo acreedor) pero con algún pago.
         if suma_haber > suma_debe + self.tolerancia:
             pendiente = (suma_haber - suma_debe).quantize(Decimal("0.01"))
             facturas = self._detalle_facturas(movs, corte)
+
+            # FIFO: los pagos liquidan las facturas MÁS ANTIGUAS primero. Si lo
+            # único que queda sin cubrir son las ÚLTIMAS facturas y todas están en
+            # plazo (recientes / no vencidas), no hay deuda antigua sin pagar: es
+            # un desfase de corte normal -> CONCILIADA (una factura reciente aún se
+            # puede pagar; lo que preocupa es una ANTIGUA sin pagar). Con abonos NO
+            # se aplica: la rectificativa enturbia qué queda sin pagar -> REVISAR.
+            sin_cubrir = self._facturas_sin_cubrir_fifo(facturas, pendiente)
+            if (n_abono == 0 and sin_cubrir
+                    and not any(self._es_factura_antigua(f) for f in sin_cubrir)):
+                return res(
+                    Clasificacion.CONCILIADA, Confianza.NA,
+                    f"Las facturas antiguas están pagadas; solo queda(n) sin pagar "
+                    f"la(s) {len(sin_cubrir)} factura(s) más reciente(s) por "
+                    f"{pendiente} €, aún en plazo. Sin deuda antigua: conciliada.",
+                    pendiente=pendiente, facturas=facturas)
+
             sub, sub_motivo = self._subclasificar_infrapago(
                 facturas, n_abono, pendiente)
             return res(
@@ -162,9 +184,42 @@ class MotorFacturasSinPago:
                 fecha=m.fecha, vencimiento=m.vencimiento, importe=m.haber,
                 referencia=m.referencias.su_factura or m.referencias.factura,
                 nif=m.referencias.nif, antiguedad_dias=dias, vencida=vencida,
-                tramo=tramo_aging(dias), comentario=m.comentario,
+                tramo=tramo_aging(dias), comentario=m.comentario, orden=m.orden,
             ))
         return tuple(out)
+
+    def _facturas_sin_cubrir_fifo(
+        self, facturas: tuple[FacturaPendiente, ...], pendiente: Decimal,
+    ) -> list[FacturaPendiente]:
+        """Imputa los pagos a las facturas MÁS ANTIGUAS primero (FIFO, la regla de
+        imputación estándar). Devuelve las facturas MÁS RECIENTES que quedan sin
+        cubrir (las que, sumadas, dan el pendiente neto). Determinista.
+
+        Recorre de la más nueva a la más vieja acumulando importes hasta llegar al
+        pendiente: esas son justo las que los pagos NO alcanzaron a liquidar."""
+        positivas = sorted(
+            (f for f in facturas if f.importe > CERO),
+            key=lambda f: f.orden, reverse=True)  # de la más nueva a la más vieja
+        restante = pendiente
+        sin_cubrir: list[FacturaPendiente] = []
+        for f in positivas:
+            if restante <= self.tolerancia:
+                break
+            sin_cubrir.append(f)
+            restante -= f.importe
+        return sin_cubrir
+
+    @staticmethod
+    def _es_factura_antigua(f: FacturaPendiente) -> bool:
+        """Una factura sin pagar preocupa si está VENCIDA (su vencimiento ya pasó
+        el corte) o si supera el umbral de 'reciente'. Si NO se puede datar la
+        factura (sin fecha ni vencimiento), no se puede afirmar que sea reciente:
+        se trata como antigua (conservador, no se auto-concilia)."""
+        if f.vencida:
+            return True
+        if f.antiguedad_dias is None:
+            return True
+        return f.antiguedad_dias > DIAS_RECIENTE
 
     def _subclasificar_infrapago(self, facturas, n_abono, pendiente):
         """Razón por la que una cuenta infrapagada queda en REVISAR (determinista).

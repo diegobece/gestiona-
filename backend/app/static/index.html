@@ -41,6 +41,7 @@
   .movs td { padding: var(--sp-1) var(--sp-2); }
   .debe  { color: #1D4ED8; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .haber { color: var(--danger); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  td.right.saldo { color: #DC2626; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
   /* ── Confidence label (text, under tag) ────────────────────── */
   .conf { font-size: 0.6875rem; color: var(--text-faint); margin-top: 2px; }
@@ -69,11 +70,13 @@
   /* ── Dark mode page-specific overrides ─────────────────────── */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .debe { color: #93C5FD; }
+    :root:not([data-theme="light"]) td.right.saldo { color: #FCA5A5; }
     :root:not([data-theme="light"]) .cand h5 { color: #86EFAC; }
     :root:not([data-theme="light"]) .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
     :root:not([data-theme="light"]) .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
   }
   [data-theme="dark"] .debe { color: #93C5FD; }
+  [data-theme="dark"] td.right.saldo { color: #FCA5A5; }
   [data-theme="dark"] .cand h5 { color: #86EFAC; }
   [data-theme="dark"] .pgbtn.sel { background: color-mix(in srgb, var(--success) 20%, transparent); border-color: var(--success); color: #86EFAC; }
   [data-theme="dark"] .accion { background: color-mix(in srgb, var(--warning) 15%, transparent); border-color: color-mix(in srgb, var(--warning) 40%, transparent); color: #FDE68A; }
@@ -134,6 +137,13 @@
           <button class="btn-ghost" onclick="cambiarArchivo()">Cambiar archivo</button>
           <button class="btn-primary" onclick="iniciarAnalisis()">Iniciar análisis</button>
         </div>
+        <div class="filebox" style="margin-top:10px">
+          <span class="filename">Extracto bancario <span class="muted">(opcional)</span>: <span id="fnameBanco" class="muted">ninguno</span></span>
+          <input id="fileBanco" type="file" accept=".xlsx,.xlsm,.xls,.csv" class="hidden"/>
+          <button class="btn-ghost" onclick="document.getElementById('fileBanco').click()">Añadir extracto</button>
+          <button class="btn-ghost hidden" id="btnQuitarBanco" onclick="quitarBanco()">Quitar</button>
+        </div>
+        <div class="muted" style="margin-top:6px;font-size:.8rem">Añade el extracto del banco (Excel/CSV) para cruzarlo con los pagos y detectar <strong>pagos del banco sin registro contable</strong> sin duplicar los ya registrados.</div>
       </div>
       <div id="status" class="muted" style="margin-top:10px;text-align:center"></div>
     </div>
@@ -143,6 +153,7 @@
     <div class="tabs">
       <button class="tab active" id="tabPagos" onclick="switchTab('pagos')">Pagos sin factura</button>
       <button class="tab" id="tabFsp" onclick="switchTab('facturas')">Facturas sin pago</button>
+      <button class="tab" id="tabConc" onclick="switchTab('conciliacion')" style="display:none">Conciliación banco</button>
     </div>
 
     <div id="viewPagos">
@@ -172,7 +183,7 @@
         <thead><tr>
           <th>Código</th><th>Cuenta</th><th>Clasificación</th>
           <th class="right">Σ Debe</th><th class="right">Σ Haber</th>
-          <th class="right">€ sospechoso</th><th>Fact/Pag</th><th>Confirmación</th>
+          <th class="right">Saldo</th><th>Fact/Pag</th><th>Confirmación</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -213,6 +224,37 @@
         </table>
       </div>
     </div><!-- /viewFacturas -->
+
+    <div id="viewConciliacion" class="hidden">
+      <div id="bannersC"></div>
+      <div class="card"><div class="summary" id="kpisC"></div></div>
+      <div class="card">
+        <div class="card-hd">
+          <strong>Salidas del banco</strong>
+          <span class="muted">cruce por nº de asiento · primero los no registrados (hallazgo) · luego casados · luego fuera de alcance</span>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Asiento</th><th>Concepto</th><th class="right">Importe</th>
+            <th>Estado</th><th>Contrapartida / pago</th>
+          </tr></thead>
+          <tbody id="tbodyC"></tbody>
+        </table>
+      </div>
+      <div class="card" id="cardPSB" style="display:none">
+        <div class="card-hd">
+          <strong>Pagos de proveedores sin salida en el banco</strong>
+          <span class="muted">aviso · pagados por otra vía o el fichero del banco es de otro periodo</span>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Cuenta</th><th>Nombre</th><th>Asiento</th><th>Fecha</th>
+            <th class="right">Importe</th><th>Referencia</th>
+          </tr></thead>
+          <tbody id="tbodyPSB"></tbody>
+        </table>
+      </div>
+    </div><!-- /viewConciliacion -->
   </div>
 </main>
 
@@ -247,6 +289,24 @@ drop.ondragleave = () => drop.style.background='';
 drop.ondrop = e => {e.preventDefault(); drop.style.background=''; if(e.dataTransfer.files[0]) seleccionar(e.dataTransfer.files[0]);};
 file.onchange = () => file.files[0] && seleccionar(file.files[0]);
 
+// Extracto bancario (opcional): se recuerda y se envía junto al Libro Mayor.
+const fileBanco = $('#fileBanco');
+fileBanco.onchange = () => {
+  if(fileBanco.files[0]){
+    window._bancoFile = fileBanco.files[0];
+    $('#fnameBanco').textContent = window._bancoFile.name;
+    $('#fnameBanco').classList.remove('muted');
+    $('#btnQuitarBanco').classList.remove('hidden');
+  }
+};
+function quitarBanco(){
+  window._bancoFile = null;
+  $('#fileBanco').value = '';
+  $('#fnameBanco').textContent = 'ninguno';
+  $('#fnameBanco').classList.add('muted');
+  $('#btnQuitarBanco').classList.add('hidden');
+}
+
 // Tras elegir archivo NO se analiza: se pide confirmación con un botón.
 function seleccionar(f){
   window._pendingFile = f;
@@ -269,6 +329,7 @@ async function subir(f){
   $('#status').textContent = 'Analizando ' + f.name + '…';
   $('#result').classList.add('hidden');
   const fd = new FormData(); fd.append('file', f);
+  if(window._bancoFile) fd.append('banco', window._bancoFile);
   const r = await fetch('/api/analizar', {method:'POST', body:fd});
   if(!r.ok){ const e = await r.json().catch(()=>({detail:r.statusText})); $('#status').textContent = (e.detail||'Error al procesar el archivo'); return; }
   render(await r.json());
@@ -305,6 +366,9 @@ async function descargar(tipo){
 function render(data){
   HUELLA = data.huella;
   window._dataF = null;            // se recarga al abrir la pestaña de facturas
+  window._dataC = null;            // idem conciliación banco
+  // La pestaña de conciliación solo aparece si se subió extracto bancario.
+  $('#tabConc').style.display = data.tiene_conciliacion ? '' : 'none';
   setTabUI('pagos');
   $('#landing').classList.add('hidden');   // centramos la atención en los resultados
   $('#result').classList.remove('hidden');
@@ -323,6 +387,8 @@ function render(data){
     const detalle = fda.map(b=>`${b.n} ${b.grupo}`).join(' · ');
     bannersHTML += `<div class="banner info">Se analizaron <strong>${s.n_en_alcance} cuentas de proveedor/acreedor</strong>. Otras <strong>${s.n_fuera_alcance}</strong> del fichero están <strong>fuera de alcance</strong> y no se analizan (no son pagos a proveedores): ${detalle}.</div>`;
   }
+  if(data.aviso_banco)
+    bannersHTML += `<div class="banner warn">${data.aviso_banco}</div>`;
   $('#banners').innerHTML = bannersHTML;
 
   // KPIs (siempre referidos a las cuentas EN ALCANCE)
@@ -385,7 +451,7 @@ function fila(c, i){
     <td><span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>${conf}${subchip}<div>${flags}</div>${vistog}</td>
     <td class="right">${EUR(c.suma_debe)}</td>
     <td class="right">${EUR(c.suma_haber)}</td>
-    <td class="right"><strong>${Number(c.importe_sospechoso)?EUR(c.importe_sospechoso):'—'}</strong></td>
+    <td class="right saldo"><strong>${Number(c.importe_sospechoso)?EUR(c.importe_sospechoso):'—'}</strong></td>
     <td>${c.num_facturas}/${c.num_pagos}</td>
     <td onclick="event.stopPropagation()">${ov || acciones(c)}</td>
   </tr>
@@ -502,8 +568,10 @@ async function ovset(codigo, veredicto, btn){
 function setTabUI(tab){
   $('#tabPagos').classList.toggle('active', tab==='pagos');
   $('#tabFsp').classList.toggle('active', tab==='facturas');
+  $('#tabConc').classList.toggle('active', tab==='conciliacion');
   $('#viewPagos').classList.toggle('hidden', tab!=='pagos');
   $('#viewFacturas').classList.toggle('hidden', tab!=='facturas');
+  $('#viewConciliacion').classList.toggle('hidden', tab!=='conciliacion');
 }
 
 async function switchTab(tab){
@@ -514,6 +582,61 @@ async function switchTab(tab){
     if(r.ok){ window._dataF = await r.json(); renderFacturas(window._dataF); }
     else { $('#tbodyF').innerHTML = '<tr><td colspan="8">Error al cargar</td></tr>'; }
   }
+  if(tab==='conciliacion' && !window._dataC){
+    $('#tbodyC').innerHTML = '<tr><td colspan="6" class="muted" style="padding:14px">Cruzando con el banco…</td></tr>';
+    const r = await fetch(`/api/informe/${HUELLA}/conciliacion`);
+    if(r.ok){ window._dataC = await r.json(); renderConciliacion(window._dataC); }
+    else { $('#tbodyC').innerHTML = '<tr><td colspan="6">Error al cargar la conciliación</td></tr>'; }
+  }
+}
+
+// ===================== Pestaña: Conciliación banco ========================
+// Reutiliza las clases de etiqueta existentes mapeando cada estado.
+const CONC_TAG = {SIN_REGISTRO:'SIN_FACTURA_ALTA_CONFIANZA', CASADO:'CONCILIADA', FUERA_DE_ALCANCE:'EXCLUIDA', REVISAR:'REVISAR'};
+const CONC_LABEL = {SIN_REGISTRO:'Sin registro', CASADO:'Casado', FUERA_DE_ALCANCE:'Fuera de alcance', REVISAR:'Revisar'};
+
+function renderConciliacion(d){
+  const s = d.resumen;
+  let b = (d.advertencias||[]).map(a=>`<div class="banner warn">${a}</div>`).join('');
+  const periodo = (s.fecha_desde && s.fecha_hasta) ? ` · banco ${s.fecha_desde} → ${s.fecha_hasta}` : '';
+  b += `<div class="banner info">Se cruzaron <strong>${s.n_salidas_banco} salidas del banco</strong> con la contabilidad de proveedores por <strong>nº de asiento</strong>${periodo}. Se destaca como <strong>hallazgo</strong> solo lo que parece un pago a proveedor sin registrar; impuestos, comisiones, efectivo… quedan fuera de alcance.</div>`;
+  $('#bannersC').innerHTML = b;
+
+  $('#kpisC').innerHTML = `
+    <div class="kpi k-rojo"><h3>Pagos del banco SIN registro</h3><div class="n">${s.n_sin_registro}</div><div class="e">${EUR(s.importe_sin_registro)}</div></div>
+    <div class="kpi k-verde"><h3>Casados (registrados)</h3><div class="n">${s.n_casados}</div><div class="e">${EUR(s.importe_casado)}</div></div>
+    <div class="kpi k-gris"><h3>Fuera de alcance</h3><div class="n">${s.n_fuera_alcance}</div><div class="e">${EUR(s.importe_fuera_alcance)} · impuestos, comisiones…</div></div>
+    <div class="kpi k-ambar"><h3>Pagos sin salida en banco</h3><div class="n">${s.n_pagos_sin_banco}</div><div class="e">${EUR(s.importe_pagos_sin_banco)}</div></div>`;
+
+  $('#tbodyC').innerHTML = (d.lineas||[]).map(filaConc).join('')
+    || '<tr><td colspan="6" class="muted" style="padding:14px">No hay salidas en el fichero del banco.</td></tr>';
+
+  const psb = d.pagos_sin_banco||[];
+  $('#cardPSB').style.display = psb.length ? '' : 'none';
+  $('#tbodyPSB').innerHTML = psb.map(p=>`
+    <tr>
+      <td>${p.codigo_cuenta}</td><td>${p.nombre_cuenta}</td>
+      <td>${p.asiento||'—'}</td><td>${p.fecha||'—'}</td>
+      <td class="right debe">${EUR(p.importe)}</td>
+      <td>${p.referencia||'—'}</td>
+    </tr>`).join('');
+}
+
+function filaConc(l){
+  const tag = `<span class="tag t-${CONC_TAG[l.estado]||'EXCLUIDA'}">${CONC_LABEL[l.estado]||l.estado}</span>`;
+  const cat = (l.estado==='FUERA_DE_ALCANCE' && l.categoria) ? `<div class="subtag">${l.categoria}</div>` : '';
+  const der = l.pago_codigo_cuenta
+    ? `${l.pago_codigo_cuenta} ${l.pago_nombre_cuenta||''}`
+    : (l.banco_contrapartida ? `<span class="muted">c/p ${l.banco_contrapartida}</span>` : '<span class="muted">—</span>');
+  return `
+  <tr>
+    <td>${l.banco_fecha||'—'}</td>
+    <td>${l.banco_asiento||'—'}</td>
+    <td>${l.banco_concepto||''}${l.banco_referencia?` <span class="muted">·ref ${l.banco_referencia}</span>`:''}</td>
+    <td class="right debe">${EUR(l.banco_importe)}</td>
+    <td>${tag}${cat}</td>
+    <td>${der}</td>
+  </tr>`;
 }
 
 const FLAGF = {
@@ -567,17 +690,29 @@ function filaFactura(c, i){
   const vistog = visToggleF(c);
   const subchip = c.subcategoria_etiqueta ? `<div class="subtag" title="${c.subcategoria_motivo||''}">${c.subcategoria_etiqueta}</div>` : '';
   const accion = c.subcategoria_accion ? `<div class="accion"><strong>Razón a revisar:</strong> ${c.subcategoria_accion}${c.subcategoria_motivo?'<br><span class="muted">'+c.subcategoria_motivo+'</span>':''}</div>` : '';
-  const facts = (c.facturas||[]).map(f=>{
-    const antig = f.antiguedad_dias==null ? '—' : `${f.vencida?'<span class="badge b-MEDIA" style="background:#c0392b">vencida</span> ':''}${f.antiguedad_dias} d <span class="muted">(${f.tramo})</span>`;
-    return `<tr>
-      <td>${f.fecha||''}</td><td>${f.vencimiento||'—'}</td><td>${antig}</td>
-      <td>${f.referencia||''}</td>
-      <td class="right haber">${EUR(f.importe)}</td></tr>`;
-  }).join('');
   const notaParcial = c.clasificacion==='REVISAR'
     ? `<p class="nocand">Pago parcial: estas son <strong>todas</strong> las facturas de la cuenta; el pendiente neto es ${EUR(c.importe_pendiente)}. No se puede precisar cuáles quedan sin pagar (emparejamiento fino = v2).</p>` : '';
-  const detalle = (c.facturas&&c.facturas.length)
-    ? `${notaParcial}<table class="movs"><thead><tr><th>Fecha</th><th>Vencim.</th><th>Antigüedad</th><th>Referencia</th><th class="right">Importe</th></tr></thead><tbody>${facts}</tbody></table>`
+  // Tabla única: todos los apuntes (pagos + facturas) con el vencimiento y la
+  // antigüedad de cada factura cruzados por el `orden` de su movimiento.
+  const factByOrden = {};
+  (c.facturas||[]).forEach(f=>{ if(f.orden!=null) factByOrden[f.orden]=f; });
+  const filas = (c.movimientos||[]).map(m=>{
+    const f = factByOrden[m.orden];
+    const antig = f ? (f.antiguedad_dias==null ? '—'
+        : `${f.vencida?'<span class="badge b-MEDIA" style="background:#c0392b">vencida</span> ':''}${f.antiguedad_dias} d <span class="muted">(${f.tramo})</span>`) : '';
+    const venc = f ? (f.vencimiento||'—') : '';
+    const ref = m.referencias.su_factura||m.referencias.factura||'';
+    return `<tr>
+      <td>${m.fecha||''}</td><td>${m.asiento}</td><td>${m.tipo}</td>
+      <td>${m.comentario}</td>
+      <td>${venc}</td><td>${antig}</td>
+      <td class="right debe">${Number(m.debe)?EUR(m.debe):''}</td>
+      <td class="right haber">${Number(m.haber)?EUR(m.haber):''}</td>
+      <td>${ref}</td>
+    </tr>`;
+  }).join('');
+  const detalle = (c.movimientos&&c.movimientos.length)
+    ? `${notaParcial}<table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th>Vencim.</th><th>Antigüedad</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${filas}</tbody></table>`
     : `<p class="nocand">—</p>`;
   return `
   <tr class="row" onclick="toggleF(${i})">

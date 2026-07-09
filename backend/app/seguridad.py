@@ -192,7 +192,7 @@ _TEMA_JS = (
     'var isDark=document.documentElement.getAttribute("data-theme")==="dark"'
     '||(!document.documentElement.getAttribute("data-theme")&&window.matchMedia("(prefers-color-scheme:dark)").matches);'
     'var btn=document.getElementById("themeBtn");'
-    'if(btn)btn.textContent=isDark?"☀":"☾";});})();<\/script>'
+    'if(btn)btn.textContent=isDark?"☀":"☾";});})();</script>'
     '<script>function toggleTheme(){'
     'var r=document.documentElement;'
     'var isDark=r.getAttribute("data-theme")==="dark"'
@@ -200,7 +200,7 @@ _TEMA_JS = (
     'var next=isDark?"light":"dark";'
     'r.setAttribute("data-theme",next);localStorage.setItem("theme",next);'
     'document.getElementById("themeBtn").textContent=next==="dark"?"☀":"☾";'
-    '}<\/script>'
+    '}</script>'
 )
 
 _TEMA_BTN = (

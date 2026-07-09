@@ -157,6 +157,8 @@ def exportar_pdf(inf: Informe, ocultos: set[str] | None = None,
         or (r.clasificacion == Clasificacion.REVISAR
             and visibilidad.get(r.codigo_cuenta) is True)
     ]
+    # Ordenadas por proveedor (código de cuenta).
+    cuentas.sort(key=lambda r: r.codigo_cuenta)
     total = sum((r.importe_sospechoso for r in cuentas), Decimal("0.00"))
 
     # --- Título e introducción ---------------------------------------------
@@ -182,7 +184,7 @@ def exportar_pdf(inf: Informe, ocultos: set[str] | None = None,
     pdf.set_xy(MARGIN + 5, y + 3)
     pdf.f("", 9)
     pdf.cell(0, 5, "PAGOS SIN FACTURA DETECTADOS", new_x="LMARGIN", new_y="NEXT")
-    n_pagos = sum(r.num_pagos for r in cuentas)
+    n_pagos = sum(len(_pagos_sin_factura(r)) for r in cuentas)
     pdf.set_xy(MARGIN + 5, y + 8)
     pdf.f("B", 14)
     pdf.cell(90, 7, f"{n_pagos} pago(s) en {len(cuentas)} cuenta(s)")
@@ -207,8 +209,16 @@ def exportar_pdf(inf: Informe, ocultos: set[str] | None = None,
 _COLS = [("Fecha", 26), ("Asiento", 24), ("Concepto", 88), ("Importe", 40)]
 
 
+def _pagos_sin_factura(r) -> list:
+    """Los pagos que representan una factura ausente. Con conciliación fina son los
+    huérfanos; si no viene esa info (cuenta con cero facturas), todos los pagos."""
+    if r.pagos_sin_factura:
+        return list(r.pagos_sin_factura)
+    return [m for m in r.movimientos if m.tipo == TipoMovimiento.PAGO]
+
+
 def _seccion_cuenta(pdf: _Informe, r) -> None:
-    pagos = [m for m in r.movimientos if m.tipo == TipoMovimiento.PAGO]
+    pagos = _pagos_sin_factura(r)
     nif = next((m.referencias.nif for m in r.movimientos if m.referencias.nif), None)
 
     # Evita cortar la cabecera de la cuenta al final de página.

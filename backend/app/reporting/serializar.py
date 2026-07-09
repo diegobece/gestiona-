@@ -162,6 +162,7 @@ from ..domain.models import (  # noqa: E402
 
 def _factura(fp) -> dict:
     return {
+        "orden": fp.orden,  # enlaza con el Movimiento de origen (para fusionar tablas)
         "fecha": fp.fecha.isoformat() if fp.fecha else None,
         "vencimiento": fp.vencimiento.isoformat() if fp.vencimiento else None,
         "importe": str(fp.importe),
@@ -194,6 +195,9 @@ def _cuenta_facturas_a_dict(r: ResultadoCuenta, explicito: bool | None) -> dict:
         "mostrar": incluir_en_informe_facturas(r.clasificacion, explicito),
         "flags": list(r.flags),
         "facturas": [_factura(f) for f in r.facturas],
+        # Todos los apuntes (pagos en Debe + facturas en Haber) para poder
+        # contrastar en el detalle igual que en el informe de pagos.
+        "movimientos": [_mov(m) for m in r.movimientos],
     }
 
 
@@ -230,6 +234,78 @@ def _breakdown_revisar_fsp(inf: Informe) -> list[dict]:
          "importe": str(acc[s]["importe"])}
         for s in SUBCATEGORIA_FSP_INFO if s in acc
     ]
+
+
+# ===========================================================================
+# Serialización de la CONCILIACIÓN BANCARIA (banco ⇄ contabilidad).
+# ===========================================================================
+from ..domain.banco import (  # noqa: E402
+    InformeConciliacion,
+    LineaConciliacion,
+    PagoSinBanco,
+)
+
+
+def _linea_conciliacion(l: LineaConciliacion) -> dict:
+    b = l.banco
+    return {
+        "estado": l.estado.value,
+        "categoria": l.categoria,
+        "motivo": l.motivo,
+        "banco_fecha": b.fecha.isoformat() if b.fecha else None,
+        "banco_importe": str(b.importe_abs),
+        "banco_concepto": b.concepto,
+        "banco_asiento": b.asiento,
+        "banco_referencia": b.referencia,
+        "banco_contrapartida": b.contrapartida,
+        "pago_codigo_cuenta": l.pago_codigo_cuenta,
+        "pago_nombre_cuenta": l.pago_nombre_cuenta,
+        "pago_importe": str(l.pago_importe) if l.pago_importe is not None else None,
+        "senales": list(l.senales),
+    }
+
+
+def _pago_sin_banco(p: PagoSinBanco) -> dict:
+    return {
+        "codigo_cuenta": p.codigo_cuenta,
+        "nombre_cuenta": p.nombre_cuenta,
+        "asiento": p.asiento,
+        "fecha": p.fecha.isoformat() if p.fecha else None,
+        "importe": str(p.importe),
+        "referencia": p.referencia,
+        "comentario": p.comentario,
+    }
+
+
+def conciliacion_banco_a_dict(inf: InformeConciliacion) -> dict:
+    r = inf.resumen
+    # Orden de la tabla: primero el hallazgo, luego casado, luego fuera de alcance.
+    _ORDEN = {"SIN_REGISTRO": 0, "REVISAR": 1, "CASADO": 2, "FUERA_DE_ALCANCE": 3}
+    lineas = sorted(
+        (_linea_conciliacion(l) for l in inf.lineas),
+        key=lambda d: (_ORDEN.get(d["estado"], 9), d["banco_fecha"] or ""),
+    )
+    return {
+        "modo": "conciliacion_banco",
+        "resumen": {
+            "n_salidas_banco": r.n_salidas_banco,
+            "n_casados": r.n_casados,
+            "importe_casado": str(r.importe_casado),
+            "n_sin_registro": r.n_sin_registro,
+            "importe_sin_registro": str(r.importe_sin_registro),
+            "n_fuera_alcance": r.n_fuera_alcance,
+            "importe_fuera_alcance": str(r.importe_fuera_alcance),
+            "n_revisar": r.n_revisar,
+            "importe_revisar": str(r.importe_revisar),
+            "n_pagos_sin_banco": r.n_pagos_sin_banco,
+            "importe_pagos_sin_banco": str(r.importe_pagos_sin_banco),
+            "fecha_desde": r.fecha_desde.isoformat() if r.fecha_desde else None,
+            "fecha_hasta": r.fecha_hasta.isoformat() if r.fecha_hasta else None,
+        },
+        "lineas": lineas,
+        "pagos_sin_banco": [_pago_sin_banco(p) for p in inf.pagos_sin_banco],
+        "advertencias": list(inf.advertencias),
+    }
 
 
 def informe_facturas_a_dict(inf: Informe, visibilidad: dict | None = None) -> dict:

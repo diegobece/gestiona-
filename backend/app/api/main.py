@@ -16,13 +16,24 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import config
+from ..domain.banco import InformeConciliacion
 from ..domain.resultados import Informe
 from ..persistence.store import OverrideStore
 from ..reporting.excel_export import exportar_excel
 from ..reporting.pdf_export import exportar_pdf, exportar_pdf_facturas
-from ..reporting.serializar import informe_a_dict, informe_facturas_a_dict
+from ..reporting.serializar import (
+    conciliacion_banco_a_dict,
+    informe_a_dict,
+    informe_facturas_a_dict,
+)
 from ..seguridad import configurar_seguridad
-from ..service import analizar_facturas_libro, analizar_libro, parsear
+from ..service import (
+    analizar_facturas_libro,
+    analizar_libro,
+    conciliar_banco,
+    parsear,
+    parsear_extracto_banco,
+)
 
 app = FastAPI(title="Detección de pagos sin factura", version="1.0",
               docs_url=None, redoc_url=None, openapi_url=None)
@@ -42,6 +53,7 @@ _store = OverrideStore(Path(__file__).parent.parent.parent / "overrides.db")
 # Cache en memoria por huella (del análisis de pagos, usada como clave común).
 _informes: dict[str, Informe] = {}        # análisis de pagos sin factura
 _informes_fsp: dict[str, Informe] = {}    # análisis inverso: facturas sin pago
+_conciliaciones: dict[str, InformeConciliacion] = {}  # cruce banco ⇄ contabilidad
 
 # Sufijo para aislar la visibilidad del informe inverso de la del directo.
 _FSP = "::fsp"
@@ -52,15 +64,24 @@ def index() -> HTMLResponse:
     return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
 
 
+async def _volcar_temporal(archivo: UploadFile) -> str:
+    """Guarda el UploadFile en un temporal y devuelve la ruta."""
+    sufijo = Path(archivo.filename or "").suffix.lower()
+    datos = await archivo.read()
+    with tempfile.NamedTemporaryFile(suffix=sufijo, delete=False) as tmp:
+        tmp.write(datos)
+        return tmp.name
+
+
 @app.post("/api/analizar")
-async def analizar(file: UploadFile = File(...)) -> JSONResponse:
+async def analizar(
+    file: UploadFile = File(...),
+    banco: UploadFile | None = File(None),
+) -> JSONResponse:
     sufijo = Path(file.filename or "").suffix.lower()
     if sufijo not in {".xlsx", ".xlsm", ".xls", ".pdf"}:
         raise HTTPException(400, "Formato no soportado. Sube un Excel (.xlsx) o PDF.")
-    datos = await file.read()
-    with tempfile.NamedTemporaryFile(suffix=sufijo, delete=False) as tmp:
-        tmp.write(datos)
-        ruta = tmp.name
+    ruta = await _volcar_temporal(file)
     try:
         libro = parsear(ruta)
         informe = analizar_libro(libro)          # pagos sin factura
@@ -70,12 +91,42 @@ async def analizar(file: UploadFile = File(...)) -> JSONResponse:
     finally:
         Path(ruta).unlink(missing_ok=True)
 
-    # Clave común para ambos análisis = huella del análisis de pagos.
+    # Clave común para todos los análisis = huella del análisis de pagos.
     _informes[informe.huella] = informe
     _informes_fsp[informe.huella] = informe_fsp
-    return JSONResponse(informe_a_dict(
+
+    # Extracto bancario opcional: si viene, se concilia contra los pagos.
+    tiene_conciliacion = False
+    aviso_banco: str | None = None
+    _conciliaciones.pop(informe.huella, None)  # limpia un cruce previo del mismo libro
+    if banco is not None and (banco.filename or "").strip():
+        ruta_b = await _volcar_temporal(banco)
+        try:
+            extracto = parsear_extracto_banco(ruta_b)
+            _conciliaciones[informe.huella] = conciliar_banco(libro, extracto)
+            tiene_conciliacion = True
+        except Exception as e:  # el fallo del banco NO tumba el análisis principal
+            aviso_banco = f"No se pudo procesar el extracto bancario: {e}"
+        finally:
+            Path(ruta_b).unlink(missing_ok=True)
+
+    payload = informe_a_dict(
         informe, _store.listar(informe.huella), _store.ocultos(informe.huella),
-        _store.visibilidad(informe.huella)))
+        _store.visibilidad(informe.huella))
+    payload["tiene_conciliacion"] = tiene_conciliacion
+    if aviso_banco:
+        payload["aviso_banco"] = aviso_banco
+    return JSONResponse(payload)
+
+
+@app.get("/api/informe/{huella}/conciliacion")
+def obtener_conciliacion(huella: str) -> JSONResponse:
+    """Cruce banco ⇄ contabilidad, si se subió extracto para este libro."""
+    inf = _conciliaciones.get(huella)
+    if inf is None:
+        raise HTTPException(404, "No hay conciliación bancaria para este análisis "
+                                 "(vuelve a subir el libro y el extracto).")
+    return JSONResponse(conciliacion_banco_a_dict(inf))
 
 
 @app.get("/api/informe/{huella}")

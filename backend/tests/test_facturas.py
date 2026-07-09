@@ -27,18 +27,34 @@ def test_facturas_sin_ningun_pago_es_alta():
     assert len(r.facturas) == 2
 
 
-def test_infrapagada_va_a_revisar_con_razon():
-    # Tiene facturas (200) y un pago parcial (120) -> infrapagada -> REVISAR.
+def test_infrapagada_con_factura_antigua_va_a_revisar_con_razon():
+    # Facturas ANTIGUAS (mediados de 2025) y un pago parcial -> queda deuda vieja
+    # sin pagar -> REVISAR (lo que de verdad importa). El corte lo fija el pago de
+    # 2026-01-15, así que las facturas quedan a >30 días -> no son recientes.
     inf = motor.analizar(libro(
-        factura("4100061", 120), factura("4100061", 80), pago("4100061", 120),
+        factura("4100061", 120, fecha=date(2025, 6, 1)),
+        factura("4100061", 80, fecha=date(2025, 6, 1)),
+        pago("4100061", 120, fecha=date(2026, 1, 15)),
     ))
     r = _res(inf, "4100061")
     assert r.clasificacion == Clasificacion.REVISAR
     assert r.importe_pendiente_pago == Decimal("80.00")
-    assert r.subcategoria in ("DESFASE_DE_CORTE", "PAGO_PARCIAL",
-                              "DEUDA_ANTIGUA", "DISTORSION_POR_ABONO")
+    assert r.subcategoria == "DEUDA_ANTIGUA"
     assert r.subcategoria_motivo  # siempre con su explicación
     assert len(r.facturas) == 2   # detalle informativo de todas las facturas
+
+
+def test_infrapagada_solo_ultima_factura_reciente_es_conciliada():
+    # Las facturas antiguas están pagadas y solo queda sin pagar la ÚLTIMA, que es
+    # reciente (dentro de plazo): no hay deuda antigua -> CONCILIADA, no REVISAR.
+    inf = motor.analizar(libro(
+        factura("4100062", 100, fecha=date(2025, 6, 1)),   # antigua, se paga
+        pago("4100062", 100, fecha=date(2025, 6, 20)),
+        factura("4100062", 90, fecha=date(2026, 1, 12)),   # reciente, sin pagar
+    ))
+    r = _res(inf, "4100062")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert r.importe_pendiente_pago == Decimal("90.00")  # informativo
 
 
 def test_infrapagada_con_abono_es_distorsion():
@@ -66,7 +82,8 @@ def test_pdf_facturas_incluye_revisar_solo_si_se_anade():
     from app.reporting.pdf_export import exportar_pdf_facturas
     inf = motor.analizar(libro(
         factura("4000003", 100),                 # FACTURA_SIN_PAGO (default sí)
-        factura("4100061", 200), pago("4100061", 120),  # REVISAR (default no)
+        factura("4100061", 200, fecha=date(2025, 6, 1)),   # antigua, infrapagada
+        pago("4100061", 120, fecha=date(2026, 1, 15)),     # -> REVISAR (default no)
     ))
     base = exportar_pdf_facturas(inf, {})                       # solo FSP
     con_revisar = exportar_pdf_facturas(inf, {"4100061": True})  # + la infrapagada

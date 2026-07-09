@@ -51,6 +51,7 @@ class FacturaPendiente:
     vencida: bool                # True si hay vencimiento y ya pasó el corte
     tramo: str                   # "0–30 días", "31–60 días", …
     comentario: str = ""
+    orden: int = -1              # `orden` del Movimiento de origen (para cruzar evidencia)
 
 
 @dataclass(frozen=True)
@@ -91,9 +92,22 @@ class ResultadoCuenta:
     # Evidencia completa: todos los movimientos de la cuenta, en orden.
     movimientos: tuple[Movimiento, ...] = ()
 
+    # Importe de pago sin factura confirmado por conciliación fina (subconjuntos).
+    # Se usa cuando el neto de la cuenta NO refleja el huérfano (p.ej. una cuenta
+    # infrapagada que aun así tiene un pago sin factura oculto entre las deudas).
+    importe_sin_factura_confirmado: Decimal | None = None
+
+    # Pagos concretos sin factura (los que representan la "factura que falta").
+    # En una cuenta con CERO facturas son todos los pagos; con conciliación fina,
+    # solo los pagos huérfanos. Es lo que se lista en el informe del cliente.
+    pagos_sin_factura: tuple[Movimiento, ...] = ()
+
     @property
     def importe_sospechoso(self) -> Decimal:
-        """€ no respaldados = exceso de pagos sobre facturas (>=0)."""
+        """€ no respaldados. Si hay un importe confirmado por conciliación fina
+        (pago huérfano), ese manda; si no, el exceso de pagos sobre facturas (>=0)."""
+        if self.importe_sin_factura_confirmado is not None:
+            return self.importe_sin_factura_confirmado
         diff = self.suma_debe - self.suma_haber
         return diff if diff > 0 else Decimal("0.00")
 

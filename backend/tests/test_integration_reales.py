@@ -10,16 +10,25 @@ from pathlib import Path
 
 import pytest
 
+from decimal import Decimal
+
 from app.domain.models import Clasificacion, Origen
 from app.engine.detector import MotorDeteccion
+from app.engine.facturas import MotorFacturasSinPago
 from app.ingest.excel_parser import parsear_excel
 from app.ingest.pdf_parser import parsear_pdf
 
 DOWNLOADS = Path.home() / "Downloads"
 EXCEL = DOWNLOADS / "TemporalFichasMayor_20260611_112723.xlsx"
 PDF = DOWNLOADS / "Fichas de mayor configurable (vertical) 110626132546.pdf"
+ARTRIP = DOWNLOADS / "ARTRIP 25-26.xlsx"
+RAIZ = Path(__file__).resolve().parents[2]
+
+# Ficheros reales disponibles para los tests de invariante (gitignored: se saltan).
+REALES = [p for p in (EXCEL, ARTRIP, RAIZ / "FICHAS MAYOR.xlsx") if p.exists()]
 
 motor = MotorDeteccion()
+motor_fsp = MotorFacturasSinPago()
 
 
 @pytest.mark.skipif(not EXCEL.exists(), reason="Excel de muestra no disponible")
@@ -42,10 +51,13 @@ def test_excel_real_clasifica_y_excluye_tecnica():
     assert amazon.subcategoria == "FACTURA_EN_OTRA_CUENTA"
     assert "4100091" in amazon.subcategoria_motivo
 
-    # Ninguna afirmación sin pagos.
+    # Ninguna afirmación sin pagos. Una cuenta SIN_FACTURA tiene siempre pagos y
+    # o bien cero facturas (Σ Haber == 0), o bien un pago sin factura CONFIRMADO
+    # por conciliación fina (flag PAGO_SIN_FACTURA_CONFIRMADO).
     for r in inf.resultados:
         if r.clasificacion == Clasificacion.SIN_FACTURA_ALTA_CONFIANZA:
-            assert r.suma_debe > 0 and r.suma_haber == 0
+            assert r.suma_debe > 0
+            assert r.suma_haber == 0 or "PAGO_SIN_FACTURA_CONFIRMADO" in r.flags
 
 
 @pytest.mark.skipif(not EXCEL.exists(), reason="Excel de muestra no disponible")
@@ -93,3 +105,54 @@ def test_pdf_reconstruye_debe_haber_desde_saldo():
     por_xl = {r.codigo_cuenta: r.clasificacion for r in inf_xl.resultados}
     por_pdf = {r.codigo_cuenta: r.clasificacion for r in inf_pdf.resultados}
     assert por_pdf == por_xl  # misma clasificación cuenta a cuenta
+
+
+@pytest.mark.skipif(not ARTRIP.exists(), reason="ARTRIP 25-26.xlsx no disponible")
+def test_artrip_integrated_no_afirma_falso_positivo_por_parciales():
+    """Regresión del falso positivo real: en ARTRIP, INTEGRATED SOLUTIONS (4100024)
+    tiene pagos PARCIALES (varios pagos que juntos liquidan una factura). El
+    conciliador antiguo declaraba 3.344,71 € de 'pagos sin factura' cuando la
+    cuenta en realidad DEBE 1.200,84 € en neto. Como está INFRAPAGADA (Σ Haber >
+    Σ Debe), todos los pagos tienen factura: NO puede haber pago sin factura ->
+    CONCILIADA en pagos sin factura (aparece en 'facturas sin pago', su sitio)."""
+    inf = motor.analizar(parsear_excel(ARTRIP))
+    r = next(x for x in inf.resultados if x.codigo_cuenta == "4100024")
+    assert r.clasificacion == Clasificacion.CONCILIADA
+    assert "PAGO_SIN_FACTURA_CONFIRMADO" not in r.flags
+    assert r.importe_sospechoso == Decimal("0.00")   # NO se afirma
+    assert r.saldo_reconstruido == Decimal("-1200.84")  # saldo fiel al fichero
+
+
+TOL = Decimal("0.01")
+
+
+@pytest.mark.skipif(not REALES, reason="No hay ficheros reales disponibles")
+@pytest.mark.parametrize("ruta", REALES, ids=lambda p: p.name)
+def test_invariante_pagos_sin_factura_solo_sobrepagadas(ruta):
+    """Regla de dominio: si se ha facturado MÁS de lo pagado (infrapagada), todos
+    los pagos tienen factura -> esa cuenta NO puede salir a revisar/afirmada en
+    'pagos sin factura'. Toda cuenta marcada aquí debe estar sobrepagada."""
+    inf = motor.analizar(parsear_excel(ruta))
+    marcadas = (Clasificacion.SIN_FACTURA_ALTA_CONFIANZA, Clasificacion.REVISAR)
+    infractoras = [
+        (r.codigo_cuenta, r.nombre_cuenta, r.suma_debe, r.suma_haber)
+        for r in inf.resultados
+        if r.clasificacion in marcadas and r.suma_haber > r.suma_debe + TOL
+    ]
+    assert not infractoras, f"{ruta.name}: infrapagadas marcadas en pagos: {infractoras}"
+
+
+@pytest.mark.skipif(not REALES, reason="No hay ficheros reales disponibles")
+@pytest.mark.parametrize("ruta", REALES, ids=lambda p: p.name)
+def test_invariante_facturas_sin_pago_solo_infrapagadas(ruta):
+    """Regla de dominio (inversa): si se ha pagado MÁS de lo facturado (sobrepagada),
+    todas las facturas tienen pago -> esa cuenta NO puede salir a revisar/afirmada
+    en 'facturas sin pago'. Toda cuenta marcada aquí debe estar infrapagada."""
+    inf = motor_fsp.analizar(parsear_excel(ruta))
+    marcadas = (Clasificacion.FACTURA_SIN_PAGO, Clasificacion.REVISAR)
+    infractoras = [
+        (r.codigo_cuenta, r.nombre_cuenta, r.suma_debe, r.suma_haber)
+        for r in inf.resultados
+        if r.clasificacion in marcadas and r.suma_debe > r.suma_haber + TOL
+    ]
+    assert not infractoras, f"{ruta.name}: sobrepagadas marcadas en facturas: {infractoras}"

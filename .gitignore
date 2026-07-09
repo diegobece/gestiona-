@@ -1,6 +1,13 @@
 # Databases (contain user data — never commit)
 *.db
 
+# Documentos reales del usuario (contabilidad/banco — NUNCA commitear)
+*.xlsx
+*.xls
+*.csv
+*.pdf
+muestras/
+
 # Python
 __pycache__/
 *.py[cod]
