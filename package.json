@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "setup": "python -m pip install -r backend/requirements.txt",
-    "start": "cd backend && python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8011",
+    "start": "node scripts/start.js",
+    "serve": "cd backend && python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8011",
     "dev": "cd backend && python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8011 --reload",
     "test": "cd backend && python -m pytest -q",
     "usuario": "python crear_usuario.py",
