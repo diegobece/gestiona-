@@ -16,6 +16,17 @@
     [data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1)}
     [data-reveal].is-visible{opacity:1;transform:none}
     nav a{transition:background .15s ease,color .15s ease}
+  
+    /* Demo animada */
+    .demo-scene{position:absolute;inset:0;opacity:0;transform:translateY(12px);
+      transition:opacity .5s ease,transform .5s ease;pointer-events:none;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px}
+    .demo-scene.on{opacity:1;transform:none}
+    .demo-chip{transition:transform .75s cubic-bezier(.34,1.25,.5,1)}
+    .demo-chip.drop{transform:translateY(150px) scale(.95)}
+    .demo-tile,.demo-row{opacity:0;transform:translateY(12px);
+      transition:opacity .45s ease,transform .45s ease}
+    .demo-tile.in,.demo-row.in{opacity:1;transform:none}
   </style>
 </head>
 <body>
@@ -99,102 +110,102 @@
           </div>
         </div>
 
-        <!-- DEMO / MOCK (movido más abajo) -->
-        <div id="producto" style="padding:64px 52px 76px;background:linear-gradient(180deg,#fbfcfe,#f4f6fa);border-top:1px solid #eef1f6;border-bottom:1px solid #eef1f6">
+        <!-- DEMO ANIMADA -->
+        <div id="producto" style="padding:64px 24px 80px;background:linear-gradient(180deg,#fbfcfe,#f4f6fa);border-top:1px solid #eef1f6;border-bottom:1px solid #eef1f6">
           <div data-reveal="" style="text-align:center;max-width:600px;margin:0 auto 40px">
             <div style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#e11835;text-transform:uppercase;margin-bottom:14px">En acción</div>
-            <h2 style="font-weight:800;font-size:40px;letter-spacing:-.025em;margin:0">Del Libro Mayor al informe</h2>
+            <h2 style="font-weight:800;font-size:40px;letter-spacing:-.025em;margin:0 0 12px">Del Libro Mayor al informe</h2>
+            <p style="font-size:16px;color:#48546a;margin:0">Subes el Excel y el motor hace el resto. Así de simple.</p>
           </div>
-          <div style="position:relative;max-width:1080px;margin:0 auto;padding:0 52px 0;animation:gmUp .8s .14s ease both">
-            <div style="background:#fff;border:1px solid #e6eaf0;border-radius:18px 18px 0 0;box-shadow:0 40px 80px -30px rgba(14,20,32,.35);overflow:hidden">
-              <div style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid #f0f2f6;background:#fbfcfe">
+          <div data-reveal="" style="max-width:900px;margin:0 auto">
+            <div style="background:#fff;border:1px solid #e6eaf0;border-radius:16px;box-shadow:0 40px 80px -30px rgba(14,20,32,.35);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:8px;padding:13px 18px;border-bottom:1px solid #f0f2f6;background:#fbfcfe">
                 <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57"></span>
                 <span style="width:11px;height:11px;border-radius:50%;background:#febc2e"></span>
                 <span style="width:11px;height:11px;border-radius:50%;background:#28c840"></span>
-                <span style="margin-left:14px;font-size:12.5px;font-weight:600;color:#48546a">Análisis contable · Pagos sin factura</span>
+                <span style="margin-left:12px;font-size:12.5px;font-weight:600;color:#48546a">Gestiona<span style="color:#e11835">+</span> · Análisis contable</span>
               </div>
-              <div style="padding:26px 28px 30px">
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
-                  <div style="border:1px solid #eef1f6;border-radius:12px;padding:16px;border-top:3px solid #e11835">
-                    <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:10px">Sin factura</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600">3</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#e11835;margin-top:2px">544,55 €</div>
+              <div id="demoStage" style="position:relative;height:432px;background:#fff">
+
+                <div id="demoUpload" class="demo-scene">
+                  <div style="width:100%;max-width:520px;border:2px dashed #d4dae4;border-radius:16px;padding:46px 30px;text-align:center">
+                    <div style="width:52px;height:52px;border-radius:14px;background:#fdeaed;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+                      <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 18V7M13 7L8.5 11.5M13 7l4.5 4.5" stroke="#e11835" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 18v2.5h16V18" stroke="#e11835" stroke-width="2" stroke-linecap="round"></path></svg>
+                    </div>
+                    <div style="font-weight:700;font-size:18px;margin-bottom:6px">Arrastra el Libro Mayor</div>
+                    <div style="font-size:13.5px;color:#8a94a6">Excel (.xlsx) o PDF</div>
                   </div>
-                  <div style="border:1px solid #eef1f6;border-radius:12px;padding:16px;border-top:3px solid #f5a623">
-                    <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:10px">En revisión</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600">4</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#8a94a6;margin-top:2px">8.190 €</div>
-                  </div>
-                  <div style="border:1px solid #eef1f6;border-radius:12px;padding:16px;border-top:3px solid #2f9e5f">
-                    <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:10px">Conciliadas</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600">20</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#2f9e5f;margin-top:2px">87% del total</div>
-                  </div>
-                  <div style="border:1px solid #eef1f6;border-radius:12px;padding:16px;border-top:3px solid #8a94a6">
-                    <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:10px">Pendiente</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600">8.4k</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#8a94a6;margin-top:2px">23 cuentas</div>
+                  <div id="demoChip" class="demo-chip" style="position:absolute;top:26px;left:50%;width:220px;margin-left:-110px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e6eaf0;border-radius:11px;padding:11px 15px;box-shadow:0 18px 34px -14px rgba(14,20,32,.35)">
+                    <span style="width:26px;height:26px;border-radius:7px;background:#e7f5ec;display:flex;align-items:center;justify-content:center;color:#2f9e5f;font-size:13px">▣</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600">FICHAS_MAYOR.xlsx</span>
                   </div>
                 </div>
-                <div style="display:grid;grid-template-columns:1.65fr 1.1fr;gap:22px;align-items:stretch">
-                  <div>
-                    <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:12px">Cuentas analizadas</div>
-                    <div style="display:flex;flex-direction:column;gap:1px;font-size:12.5px">
-                      <div style="display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid #f2f4f8">
-                        <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000017</span>
-                        <span style="flex:1;font-weight:500">FRINUS</span>
-                        <span style="font-size:10px;font-weight:700;color:#e11835;background:#fdeaed;padding:3px 9px;border-radius:6px">SIN FACTURA</span>
-                        <span style="font-family:'JetBrains Mono',monospace;color:#e11835;font-weight:600">311,76 €</span>
-                      </div>
-                      <div style="display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid #f2f4f8">
-                        <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000034</span>
-                        <span style="flex:1;font-weight:500">SALVIONI &amp; ALOMAR</span>
-                        <span style="font-size:10px;font-weight:700;color:#2f9e5f;background:#e7f5ec;padding:3px 9px;border-radius:6px">CONCILIADA</span>
-                        <span style="font-family:'JetBrains Mono',monospace;font-weight:600">566,29 €</span>
-                      </div>
-                      <div style="display:flex;align-items:center;gap:12px;padding:10px 2px">
-                        <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000008</span>
-                        <span style="flex:1;font-weight:500">HERCO</span>
-                        <span style="font-size:10px;font-weight:700;color:#2f9e5f;background:#e7f5ec;padding:3px 9px;border-radius:6px">CONCILIADA</span>
-                        <span style="font-family:'JetBrains Mono',monospace;font-weight:600">79,82 €</span>
-                      </div>
+
+                <div id="demoProgress" class="demo-scene">
+                  <div style="width:100%;max-width:520px">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+                      <span style="width:28px;height:28px;border-radius:8px;background:#e7f5ec;display:flex;align-items:center;justify-content:center;color:#2f9e5f;font-size:14px">▣</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600">FICHAS_MAYOR.xlsx</span>
+                      <span id="demoPct" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:14px;color:#e11835;font-weight:600">0%</span>
                     </div>
-                  </div>
-                  <div style="border:1px solid #eef1f6;border-radius:12px;padding:20px 22px 18px;background:#fbfcfe;display:flex;flex-direction:column">
-                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">
-                      <div style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase">Nivel de confianza</div>
-                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a94a6">n=23</div>
+                    <div style="height:10px;border-radius:100px;background:#eef1f6;overflow:hidden">
+                      <div id="demoFill" style="height:100%;width:0;border-radius:100px;background:linear-gradient(90deg,#e11835,#b3122a);transition:width .18s linear"></div>
                     </div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#48546a;margin-bottom:16px">Reparto de cuentas analizadas</div>
-                    <div style="position:relative;flex:1;min-height:150px">
-                      <div style="position:absolute;inset:0 0 22px 0;display:flex;flex-direction:column;justify-content:space-between">
-                        <div style="border-top:1px solid #eef1f6"></div>
-                        <div style="border-top:1px solid #eef1f6"></div>
-                        <div style="border-top:1px solid #eef1f6"></div>
-                        <div style="border-top:1px solid #e6eaf0"></div>
-                      </div>
-                      <div style="position:absolute;inset:0 0 22px 0;display:flex;align-items:flex-end;gap:20px;padding:0 6px">
-                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-                          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:#0e1420;margin-bottom:6px">14</div>
-                          <div style="width:100%;height:100%;background:linear-gradient(180deg,#e11835,#c0122a);border-radius:6px 6px 0 0;transform-origin:bottom;animation:gmBar .8s .2s cubic-bezier(.22,.61,.36,1) both"></div>
-                        </div>
-                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-                          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:#0e1420;margin-bottom:6px">6</div>
-                          <div style="width:100%;height:43%;background:linear-gradient(180deg,#f5a623,#e08c0a);border-radius:6px 6px 0 0;transform-origin:bottom;animation:gmBar .8s .32s cubic-bezier(.22,.61,.36,1) both"></div>
-                        </div>
-                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-                          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:#0e1420;margin-bottom:6px">3</div>
-                          <div style="width:100%;height:21%;background:linear-gradient(180deg,#cbd3e0,#aeb8c9);border-radius:6px 6px 0 0;transform-origin:bottom;animation:gmBar .8s .44s cubic-bezier(.22,.61,.36,1) both"></div>
-                        </div>
-                      </div>
-                      <div style="position:absolute;left:0;right:0;bottom:0;display:flex;gap:20px;padding:0 6px">
-                        <div style="flex:1;text-align:center;font-size:10.5px;font-weight:600;color:#48546a">Alta</div>
-                        <div style="flex:1;text-align:center;font-size:10.5px;font-weight:600;color:#48546a">Media</div>
-                        <div style="flex:1;text-align:center;font-size:10.5px;font-weight:600;color:#48546a">Baja</div>
-                      </div>
-                    </div>
+                    <div id="demoStep" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a94a6;text-align:center">Leyendo el fichero…</div>
                   </div>
                 </div>
+
+                <div id="demoResults" class="demo-scene" style="align-items:stretch;justify-content:flex-start;padding:26px 28px">
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+                    <div class="demo-tile" style="border:1px solid #eef1f6;border-left:3px solid #e11835;border-radius:11px;padding:13px 14px;background:#fff">
+             <div style="font-size:10px;font-weight:700;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:9px">Sin factura</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;line-height:1">3</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#e11835;margin-top:5px">544,55 €</div>
+           </div>
+                    <div class="demo-tile" style="border:1px solid #eef1f6;border-left:3px solid #f5a623;border-radius:11px;padding:13px 14px;background:#fff">
+             <div style="font-size:10px;font-weight:700;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:9px">En revisión</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;line-height:1">0</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8a94a6;margin-top:5px">0,00 €</div>
+           </div>
+                    <div class="demo-tile" style="border:1px solid #eef1f6;border-left:3px solid #2f9e5f;border-radius:11px;padding:13px 14px;background:#fff">
+             <div style="font-size:10px;font-weight:700;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:9px">Conciliadas</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;line-height:1">20</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#2f9e5f;margin-top:5px">87%</div>
+           </div>
+                    <div class="demo-tile" style="border:1px solid #eef1f6;border-left:3px solid #aeb8c9;border-radius:11px;padding:13px 14px;background:#fff">
+             <div style="font-size:10px;font-weight:700;letter-spacing:.04em;color:#8a94a6;text-transform:uppercase;margin-bottom:9px">Cuentas</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;line-height:1">23</div>
+             <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8a94a6;margin-top:5px">en alcance</div>
+           </div>
+                  </div>
+                  <div style="border:1px solid #eef1f6;border-radius:12px;overflow:hidden">
+                    <div class="demo-row" style="display:grid;grid-template-columns:78px 1fr auto auto;gap:12px;padding:11px 14px;align-items:center;font-size:12.5px;border-bottom:1px solid #f2f4f8">
+             <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000017</span>
+             <span style="font-weight:600">FRINUS</span>
+             <span style="font-size:9px;font-weight:700;color:#fff;background:#e11835;padding:3px 8px;border-radius:5px">SIN FACTURA</span>
+             <span style="font-family:'JetBrains Mono',monospace;color:#e11835;font-weight:600">311,76 €</span>
+           </div>
+                    <div class="demo-row" style="display:grid;grid-template-columns:78px 1fr auto auto;gap:12px;padding:11px 14px;align-items:center;font-size:12.5px;border-bottom:1px solid #f2f4f8">
+             <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000026</span>
+             <span style="font-weight:600">VESTUARIO LABORAL SL</span>
+             <span style="font-size:9px;font-weight:700;color:#fff;background:#e11835;padding:3px 8px;border-radius:5px">SIN FACTURA</span>
+             <span style="font-family:'JetBrains Mono',monospace;color:#e11835;font-weight:600">184,91 €</span>
+           </div>
+                    <div class="demo-row" style="display:grid;grid-template-columns:78px 1fr auto auto;gap:12px;padding:11px 14px;align-items:center;font-size:12.5px;border-bottom:1px solid #f2f4f8">
+             <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000034</span>
+             <span style="font-weight:600">SALVIONI &amp; ALOMAR</span>
+             <span style="font-size:9px;font-weight:700;color:#2f9e5f;background:#e7f5ec;padding:3px 8px;border-radius:5px">CONCILIADA</span>
+             <span style="font-family:'JetBrains Mono',monospace;font-weight:600">566,29 €</span>
+           </div>
+                    <div class="demo-row" style="display:grid;grid-template-columns:78px 1fr auto auto;gap:12px;padding:11px 14px;align-items:center;font-size:12.5px;border-bottom:1px solid #f2f4f8">
+             <span style="font-family:'JetBrains Mono',monospace;color:#8a94a6;font-size:11px">4000008</span>
+             <span style="font-weight:600">HERCO</span>
+             <span style="font-size:9px;font-weight:700;color:#2f9e5f;background:#e7f5ec;padding:3px 8px;border-radius:5px">CONCILIADA</span>
+             <span style="font-family:'JetBrains Mono',monospace;font-weight:600">79,82 €</span>
+           </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -269,6 +280,48 @@
       }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
       items.forEach(function(el){ io.observe(el); });
     }
+  })();
+  </script>
+
+  <script>
+  (function(){
+    var stage=document.getElementById('demoStage');
+    if(!stage) return;
+    var ids=['demoUpload','demoProgress','demoResults'];
+    var fill=document.getElementById('demoFill'), pct=document.getElementById('demoPct'),
+        step=document.getElementById('demoStep'), chip=document.getElementById('demoChip');
+    var pasos=['Leyendo el fichero…','Reconstruyendo saldos…','Detectando pagos sin factura…','Preparando el informe…'];
+    var pt=null, timers=[];
+    function show(id){ ids.forEach(function(s){ document.getElementById(s).classList.toggle('on', s===id); }); }
+    function later(fn,ms){ timers.push(setTimeout(fn,ms)); }
+    function run(){
+      timers.forEach(clearTimeout); timers=[]; clearInterval(pt);
+      show('demoUpload');
+      if(chip) chip.classList.remove('drop');
+      fill.style.width='0%'; pct.textContent='0%'; step.textContent=pasos[0];
+      document.querySelectorAll('#demoResults .demo-tile,#demoResults .demo-row').forEach(function(el){el.classList.remove('in');});
+      later(function(){ if(chip) chip.classList.add('drop'); }, 1000);
+      later(function(){ show('demoProgress'); bar(); }, 2100);
+      later(function(){ show('demoResults'); reveal(); }, 5400);
+      later(run, 9200);
+    }
+    function bar(){
+      var p=0; clearInterval(pt);
+      pt=setInterval(function(){
+        p=Math.min(100,p+(100-p)*0.14+2);
+        fill.style.width=p.toFixed(0)+'%'; pct.textContent=p.toFixed(0)+'%';
+        step.textContent=pasos[Math.min(pasos.length-1,Math.floor(p/26))];
+        if(p>=100) clearInterval(pt);
+      },150);
+    }
+    function reveal(){
+      var els=document.querySelectorAll('#demoResults .demo-tile,#demoResults .demo-row');
+      els.forEach(function(el,i){ setTimeout(function(){ el.classList.add('in'); }, 90*i); });
+    }
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting){ run(); io.disconnect(); } }); },{threshold:.3});
+      io.observe(stage);
+    } else { run(); }
   })();
   </script>
 </body>
