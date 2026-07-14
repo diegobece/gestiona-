@@ -35,6 +35,14 @@
     .demo-pdf{transition:transform .12s ease,box-shadow .2s ease}
     .demo-pdf.press{transform:scale(.93)}
     .demo-pdf.flash{box-shadow:0 0 0 4px rgba(225,24,53,.28)}
+    #demoOutro .demo-outrow{display:flex;align-items:center;justify-content:center;gap:0}
+    #demoOutro .demo-olg,#demoOutro .demo-onm,#demoOutro .demo-otag{opacity:0}
+    #demoOutro.on .demo-olg{animation:gmLogoIntro .8s cubic-bezier(.34,1.5,.5,1) .2s both}
+    #demoOutro.on .demo-onm{overflow:hidden;white-space:nowrap;animation:gmNameIn2 .5s ease .78s both}
+    #demoOutro.on .demo-otag{animation:demoFadeUp .5s ease 1.12s both}
+    @keyframes gmLogoIntro{0%{opacity:0;transform:scale(2.2)}40%{opacity:1;transform:scale(2.2)}100%{opacity:1;transform:scale(1)}}
+    @keyframes gmNameIn2{from{opacity:0;max-width:0;margin-left:0}to{opacity:1;max-width:360px;margin-left:14px}}
+    @keyframes demoFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   </style>
 </head>
 <body>
@@ -119,7 +127,7 @@
         </div>
 
         <!-- DEMO ANIMADA -->
-        <div id="producto" style="padding:64px 24px 80px;background:linear-gradient(180deg,#fbfcfe,#f4f6fa);border-top:1px solid #eef1f6;border-bottom:1px solid #eef1f6">
+        <div id="producto" style="padding:64px 24px 80px;background:radial-gradient(58% 46% at 50% 38%,rgba(225,24,53,.16),transparent 62%),linear-gradient(180deg,#fbfcfe,#f4f6fa);border-top:1px solid #eef1f6;border-bottom:1px solid #eef1f6">
           <div data-reveal="" style="text-align:center;max-width:600px;margin:0 auto 40px">
             <div style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#e11835;text-transform:uppercase;margin-bottom:14px">En acción</div>
             <h2 style="font-weight:800;font-size:40px;letter-spacing:-.025em;margin:0 0 12px">Del Libro Mayor al informe</h2>
@@ -340,6 +348,14 @@
                   </div>
                 </div>
 
+                <div id="demoOutro" class="demo-scene" style="background:radial-gradient(80% 130% at 50% 0%,#1b2233,#0e1420)">
+                  <div class="demo-outrow">
+                    <div class="demo-olg" style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#e11835,#b3122a);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:38px;color:#fff;box-shadow:0 18px 36px -10px rgba(225,24,53,.75)">G</div>
+                    <div class="demo-onm" style="font-weight:800;font-size:44px;letter-spacing:-.02em;color:#fff">Gestiona<span style="color:#e11835">+</span></div>
+                  </div>
+                  <div class="demo-otag" style="margin-top:16px;font-size:14.5px;color:#98a2b6;font-weight:500">Tu gestoría, en piloto automático</div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -421,7 +437,7 @@
   (function(){
     var stage=document.getElementById('demoStage');
     if(!stage) return;
-    var ids=['demoUpload','demoProgress','demoResults','demoReport'];
+    var ids=['demoUpload','demoProgress','demoResults','demoReport','demoOutro'];
     var fill=document.getElementById('demoFill'), pct=document.getElementById('demoPct'),
         step=document.getElementById('demoStep'), chip=document.getElementById('demoChip'),
         list=document.getElementById('demoList'), cursor=document.getElementById('demoCursor'),
@@ -456,7 +472,8 @@
       later(function(){ if(pdf) pdf.classList.remove('press'); }, 11200);
       // informe profesional
       later(function(){ show('demoReport'); }, 11500);
-      later(run, 15400);
+      later(function(){ show('demoOutro'); }, 15200);
+      later(run, 17800);
     }
     function bar(){
       var p=0; clearInterval(pt);
