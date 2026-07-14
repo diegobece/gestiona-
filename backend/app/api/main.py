@@ -71,6 +71,12 @@ def index() -> HTMLResponse:
     return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
 
 
+@app.get("/informe", response_class=HTMLResponse)
+def editor_informe() -> HTMLResponse:
+    """Editor de informe de cliente (protegido por login)."""
+    return HTMLResponse((_STATIC / "informe.html").read_text(encoding="utf-8"))
+
+
 async def _volcar_temporal(archivo: UploadFile) -> str:
     """Guarda el UploadFile en un temporal y devuelve la ruta."""
     sufijo = Path(archivo.filename or "").suffix.lower()
