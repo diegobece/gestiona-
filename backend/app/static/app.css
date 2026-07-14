@@ -306,6 +306,29 @@ tr.detail .inner{padding:20px 24px}
 .ovbar button.primary:hover{background:var(--accent-hover);color:#fff}
 .ov-set{font-size:12px;font-weight:600;color:var(--green)}
 
+/* ── Panel de revisión (detalle en widget sobre la tabla) ─────────────── */
+.btn-revisar{border:1px solid var(--ibd);background:var(--card);font-family:inherit;font-size:12px;
+  font-weight:600;color:var(--tx);padding:6px 15px;border-radius:8px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s}
+.btn-revisar:hover{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--card))}
+.btn-revisar.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+tr.row.sel{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+tr.row.sel>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.detbox{background:var(--card);border:1px solid var(--bd);border-radius:16px;margin-bottom:22px;
+  box-shadow:var(--shadow-card);overflow:hidden;animation:gmUp .35s cubic-bezier(.22,.61,.36,1) both}
+.detbox-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 22px;
+  border-bottom:1px solid var(--bd-soft);background:var(--card-2)}
+.detbox-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.detbox-title .detbox-code{font-family:var(--mono);font-size:12px;color:var(--mut)}
+.detbox-title strong{font-size:15px;color:var(--tx)}
+.detbox-close{border:1px solid var(--ibd);background:var(--card);color:var(--mut);width:30px;height:30px;
+  border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
+  transition:border-color .15s,color .15s;flex:none}
+.detbox-close:hover{border-color:var(--accent);color:var(--accent)}
+.detbox-body{padding:20px 22px}
+.movbox{border:1px solid var(--bd-soft);border-radius:12px;overflow:hidden;margin-top:12px}
+.movbox .movs{margin-top:0;border:none;border-radius:0}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media(max-width:900px){
   main{padding:24px 18px 60px}

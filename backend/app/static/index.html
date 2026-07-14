@@ -108,6 +108,8 @@
       <div id="revbreak" class="revbreak"></div>
     </div>
 
+    <div id="detallePanel" class="hidden"></div>
+
     <div class="card">
       <div class="card-hd">
         <strong>Cuentas analizadas</strong>
@@ -144,6 +146,9 @@
         </div>
         <div id="revbreakF" class="revbreak"></div>
       </div>
+
+      <div id="detallePanelF" class="hidden"></div>
+
       <div class="card">
         <div class="card-hd">
           <strong>Cuentas analizadas</strong>
@@ -399,6 +404,8 @@ function render(data){
 
 function pintarTabla(){
   const cs = window._cuentas.filter(c => !window._filtroSub || c.subcategoria===window._filtroSub);
+  window._filasP = cs;
+  cerrarDetalle();
   $('#tbody').innerHTML = cs.map((c,i)=>fila(c,i)).join('');
 }
 
@@ -411,21 +418,11 @@ function filtrarSub(sub){
 function fila(c, i){
   const flags = (c.flags||[]).map(f=>`<span class="flagchip">${f}</span>`).join('');
   const conf = c.confianza!=='NA' ? `<div class="conf">conf. ${c.confianza}</div>` : '';
-  const ov = c.override ? `<span class="ov-set">✓ ${c.override.veredicto}</span>` : '';
-  const movs = c.movimientos.map(m=>`
-    <tr>
-      <td>${m.fecha||''}</td><td>${m.asiento}</td><td>${m.tipo}</td>
-      <td>${m.comentario}</td>
-      <td class="right debe">${Number(m.debe)?EUR(m.debe):''}</td>
-      <td class="right haber">${Number(m.haber)?EUR(m.haber):''}</td>
-      <td>${m.referencias.su_factura||m.referencias.factura||''}</td>
-    </tr>`).join('');
+  const ov = c.override ? `<span class="ov-set">✓ ${c.override.veredicto}</span> ` : '';
   const subchip = c.subcategoria_etiqueta ? `<div class="subtag" title="${c.subcategoria_motivo||''}">${c.subcategoria_etiqueta}</div>` : '';
   const vistog = visToggle(c);
-  const accion = c.subcategoria_accion ? `<div class="accion"><strong>Acción sugerida:</strong> ${c.subcategoria_accion}${c.subcategoria_motivo?'<br><span class="muted">'+c.subcategoria_motivo+'</span>':''}</div>` : '';
-  const cand = candidatosHTML(c);
   return `
-  <tr class="row" onclick="toggle(${i})">
+  <tr class="row" onclick="abrirDetalle(${i})">
     <td>${c.codigo_cuenta}</td>
     <td>${c.nombre_cuenta}</td>
     <td><span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>${conf}${subchip}<div>${flags}</div>${vistog}</td>
@@ -433,15 +430,58 @@ function fila(c, i){
     <td class="right">${EUR(c.suma_haber)}</td>
     <td class="right saldo"><strong>${Number(c.importe_sospechoso)?EUR(c.importe_sospechoso):'—'}</strong></td>
     <td>${c.num_facturas}/${c.num_pagos}</td>
-    <td onclick="event.stopPropagation()">${ov || acciones(c)}</td>
-  </tr>
-  <tr class="detail hidden" id="d${i}"><td colspan="8"><div class="inner">
-    <p class="motivo">${c.motivo}</p>
-    ${accion}
-    ${cand}
-    <table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${movs}</tbody></table>
-    ${overrideBar(c)}
-  </div></td></tr>`;
+    <td onclick="event.stopPropagation()">${ov}${acciones(c,i)}</td>
+  </tr>`;
+}
+
+// Detalle de un pago sin factura, para el widget sobre la tabla.
+function detalleHTML(c){
+  const movs = (c.movimientos||[]).map(m=>`
+    <tr>
+      <td>${m.fecha||''}</td><td>${m.asiento}</td><td>${m.tipo}</td>
+      <td>${m.comentario}</td>
+      <td class="right debe">${Number(m.debe)?EUR(m.debe):''}</td>
+      <td class="right haber">${Number(m.haber)?EUR(m.haber):''}</td>
+      <td>${m.referencias.su_factura||m.referencias.factura||''}</td>
+    </tr>`).join('');
+  const accion = c.subcategoria_accion ? `<div class="accion"><strong>Acción sugerida:</strong> ${c.subcategoria_accion}${c.subcategoria_motivo?'<br><span class="muted">'+c.subcategoria_motivo+'</span>':''}</div>` : '';
+  const cand = candidatosHTML(c);
+  return `<div class="detbox">
+    <div class="detbox-hd">
+      <div class="detbox-title">
+        <span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>
+        <span class="detbox-code">${c.codigo_cuenta}</span>
+        <strong>${c.nombre_cuenta}</strong>
+      </div>
+      <button class="detbox-close" onclick="cerrarDetalle()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="detbox-body">
+      <p class="motivo">${c.motivo}</p>
+      ${accion}
+      ${cand}
+      <div class="movbox"><table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${movs}</tbody></table></div>
+      ${overrideBar(c)}
+    </div>
+  </div>`;
+}
+
+let _selP = null;
+function abrirDetalle(i){
+  const c = (window._filasP||[])[i];
+  if(!c) return;
+  if(_selP===i){ cerrarDetalle(); return; }   // volver a pulsar = cerrar
+  _selP = i;
+  const panel = $('#detallePanel');
+  panel.innerHTML = detalleHTML(c);
+  panel.classList.remove('hidden');
+  document.querySelectorAll('#tbody tr.row').forEach((tr,idx)=>tr.classList.toggle('sel', idx===i));
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function cerrarDetalle(){
+  _selP = null;
+  const panel = $('#detallePanel');
+  if(panel){ panel.classList.add('hidden'); panel.innerHTML=''; }
+  document.querySelectorAll('#tbody tr.row').forEach(tr=>tr.classList.remove('sel'));
 }
 
 const CONF_LABEL = {ALTA:'ALTA', MEDIA:'MEDIA', BAJA:'POSIBLE'};
@@ -515,24 +555,21 @@ async function setVis(ev, cod, mostrar){
   btn.outerHTML = visToggle(c);
 }
 
-function acciones(c){
+function acciones(c, i){
   if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA' && c.clasificacion!=='REVISAR') return '<span class="muted">—</span>';
-  return `<button onclick="toggleFromCell(this)">Revisar ▾</button>`;
+  return `<button class="btn-revisar${_selP===i?' active':''}" onclick="abrirDetalle(${i})">Revisar</button>`;
 }
 
 function overrideBar(c){
   if(c.clasificacion!=='SIN_FACTURA_ALTA_CONFIANZA' && c.clasificacion!=='REVISAR') return '';
   return `<div class="ovbar">
-    <span class="muted">Confirmación del humano:</span>
+    <span class="muted">Revisión por humano:</span>
     <button class="primary" onclick="ovset('${c.codigo_cuenta}','SIN_FACTURA',this)">Sí, sin factura</button>
     <button onclick="ovset('${c.codigo_cuenta}','EN_OTRA_CUENTA',this)">Está en otra cuenta</button>
     <button onclick="ovset('${c.codigo_cuenta}','EJERCICIO_ANTERIOR',this)">Es de 2025</button>
     <span id="ovmsg-${c.codigo_cuenta}" class="ov-set"></span>
   </div>`;
 }
-
-function toggle(i){ $('#d'+i).classList.toggle('hidden'); }
-function toggleFromCell(btn){ const tr = btn.closest('tr'); const idx = [...tr.parentNode.children].indexOf(tr); tr.parentNode.children[idx+1].classList.toggle('hidden'); }
 
 async function ovset(codigo, veredicto, btn){
   const r = await fetch(`/api/informe/${HUELLA}/cuenta/${codigo}/override`,{
@@ -662,6 +699,8 @@ function renderFacturas(d){
   window._cuentasF = [...d.cuentas]
     .filter(c=>c.clasificacion!=='FUERA_DE_ALCANCE')
     .sort((a,b)=> (ORDENF[a.clasificacion]-ORDENF[b.clasificacion]) || (Number(b.importe_pendiente)-Number(a.importe_pendiente)));
+  window._filasF = window._cuentasF;
+  cerrarDetalleF();
   $('#tbodyF').innerHTML = window._cuentasF.map((c,i)=>filaFactura(c,i)).join('');
 }
 
@@ -692,10 +731,12 @@ function filaFactura(c, i){
     </tr>`;
   }).join('');
   const detalle = (c.movimientos&&c.movimientos.length)
-    ? `${notaParcial}<table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th>Vencim.</th><th>Antigüedad</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${filas}</tbody></table>`
+    ? `${notaParcial}<div class="movbox"><table class="movs"><thead><tr><th>Fecha</th><th>Asiento</th><th>Tipo</th><th>Comentario</th><th>Vencim.</th><th>Antigüedad</th><th class="right">Debe</th><th class="right">Haber</th><th>Referencia</th></tr></thead><tbody>${filas}</tbody></table></div>`
     : `<p class="nocand">—</p>`;
+  window._detFcache = window._detFcache || {};
+  window._detFcache[i] = {c, accion, detalle};
   return `
-  <tr class="row" onclick="toggleF(${i})">
+  <tr class="row" onclick="abrirDetalleF(${i})">
     <td>${c.codigo_cuenta}</td>
     <td>${c.nombre_cuenta}</td>
     <td><span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>${subchip}<div>${flags}</div>${vistog}</td>
@@ -704,20 +745,59 @@ function filaFactura(c, i){
     <td class="right"><strong>${Number(c.importe_pendiente)?EUR(c.importe_pendiente):'—'}</strong></td>
     <td>${c.num_facturas}/${c.num_pagos}</td>
     <td onclick="event.stopPropagation()">${accionesF(c,i)}</td>
-  </tr>
-  <tr class="detail hidden" id="df${i}"><td colspan="8"><div class="inner">
-    <p class="motivo">${c.motivo}</p>
-    ${accion}
-    ${detalle}
-  </div></td></tr>`;
+  </tr>`;
 }
 
-function toggleF(i){ $('#df'+i).classList.toggle('hidden'); }
+// Detalle de una factura sin pago, para el widget sobre la tabla.
+function detalleFacturaHTML(i){
+  const d = (window._detFcache||{})[i];
+  if(!d) return '';
+  const c = d.c;
+  return `<div class="detbox">
+    <div class="detbox-hd">
+      <div class="detbox-title">
+        <span class="tag t-${c.clasificacion}">${c.clasificacion.replace(/_/g,' ')}</span>
+        <span class="detbox-code">${c.codigo_cuenta}</span>
+        <strong>${c.nombre_cuenta}</strong>
+      </div>
+      <button class="detbox-close" onclick="cerrarDetalleF()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="detbox-body">
+      <p class="motivo">${c.motivo}</p>
+      ${d.accion}
+      ${d.detalle}
+      ${revHumanoF(c)}
+    </div>
+  </div>`;
+}
+
+function revHumanoF(c){
+  if(c.clasificacion!=='FACTURA_SIN_PAGO' && c.clasificacion!=='REVISAR') return '';
+  return `<div class="ovbar"><span class="muted">Revisión por humano:</span>
+    <span class="muted" style="font-weight:400">Confirma con el interruptor «En informe» de la fila si estas facturas quedan realmente sin pagar.</span></div>`;
+}
+
+let _selF = null;
+function abrirDetalleF(i){
+  if((window._filasF||[])[i]==null) return;
+  if(_selF===i){ cerrarDetalleF(); return; }
+  _selF = i;
+  const panel = $('#detallePanelF');
+  panel.innerHTML = detalleFacturaHTML(i);
+  panel.classList.remove('hidden');
+  document.querySelectorAll('#tbodyF tr.row').forEach((tr,idx)=>tr.classList.toggle('sel', idx===i));
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function cerrarDetalleF(){
+  _selF = null;
+  const panel = $('#detallePanelF');
+  if(panel){ panel.classList.add('hidden'); panel.innerHTML=''; }
+  document.querySelectorAll('#tbodyF tr.row').forEach(tr=>tr.classList.remove('sel'));
+}
 function accionesF(c,i){
   if(c.clasificacion!=='FACTURA_SIN_PAGO' && c.clasificacion!=='REVISAR') return '<span class="muted">—</span>';
-  return `<button onclick="toggleFFromCell(this)">Revisar ▾</button>`;
+  return `<button class="btn-revisar${_selF===i?' active':''}" onclick="abrirDetalleF(${i})">Revisar</button>`;
 }
-function toggleFFromCell(btn){ const tr=btn.closest('tr'); const idx=[...tr.parentNode.children].indexOf(tr); tr.parentNode.children[idx+1].classList.toggle('hidden'); }
 
 function visToggleF(c){
   if(c.clasificacion==='FACTURA_SIN_PAGO'){
