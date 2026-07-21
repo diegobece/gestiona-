@@ -12,5 +12,14 @@ itsdangerous>=2.1   # cookies de sesión firmadas (login)
 # Exportación
 fpdf2>=2.7
 
+# Asistente del editor de informes (chatbot con la API de OpenAI / ChatGPT)
+openai>=1.40
+
+# Razonador de casos REVISAR con Claude (Opus 4.8). Opcional: solo se activa si
+# hay ANTHROPIC_API_KEY en el entorno. Requiere una versión reciente del SDK con
+# soporte de Opus 4.8, thinking adaptativo y output_config (structured outputs):
+# esos parámetros NO existen en 0.69.x. Probado con 0.116.
+anthropic>=0.116
+
 # Tests
 pytest>=8.0

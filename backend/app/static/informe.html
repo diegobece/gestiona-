@@ -15,7 +15,7 @@
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-thumb{background:#c9d0db;border-radius:8px;border:2px solid transparent;background-clip:padding-box}
   ::-webkit-scrollbar-thumb:hover{background:#aab4c4;background-clip:padding-box}
-  #gm-editor-root{--gm-primary:#e11835;--gm-primary-d:#b3122a;--gm-accent:#0e1420;--gm-font:'Plus Jakarta Sans',sans-serif;--gm-soft:#fdeaed;animation:gmFade .35s ease both}
+  #gm-editor-root{--gm-primary:#e11835;--gm-primary-d:#b3122a;--gm-accent:#0e1420;--gm-font:'Plus Jakarta Sans',sans-serif;--gm-soft:#fdeaed;--gm-page-bg:#fff;animation:gmFade .35s ease both}
   @keyframes gmUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
   @keyframes gmFade{from{opacity:0}to{opacity:1}}
   @keyframes gmPop{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:none}}
@@ -46,10 +46,11 @@
     {name:'Ámbar', primary:'#d9822b', accent:'#2b1c0e'}
   ];
 
+  var DEFAULTS={companyName:'Gestiona +', reportTitle:'Informe de análisis contable', clientName:'Cliente S.L.',
+       period:'Ejercicio 2025', font:"'Plus Jakarta Sans',sans-serif", primary:'#e11835', accent:'#0e1420',
+       logo:null, showKpis:false, showTable:true, showNote:false, pageBg:'#ffffff', css:''};
   var state={
-    cfg:{companyName:'Gestiona +', reportTitle:'Informe de análisis contable', clientName:'Cliente S.L.',
-         period:'Ejercicio 2025', font:"'Plus Jakarta Sans',sans-serif", primary:'#e11835', accent:'#0e1420',
-         logo:null, showKpis:false, showTable:true, showNote:false},
+    cfg:Object.assign({},DEFAULTS),
     sideTab:'design', saved:[], messages:[], thinking:false, toast:''
   };
 
@@ -65,6 +66,7 @@
     el.style.setProperty('--gm-accent',c.accent);
     el.style.setProperty('--gm-font',c.font);
     el.style.setProperty('--gm-soft',softTint(c.primary));
+    el.style.setProperty('--gm-page-bg',c.pageBg||'#ffffff');
   }
   function persist(){ try{localStorage.setItem('gm_report_current',JSON.stringify(state.cfg));}catch(e){} }
   function setCfg(patch){ Object.assign(state.cfg,patch); persist(); render(); }
@@ -88,27 +90,146 @@
   function usarSaved(id){ var s=state.saved.filter(function(x){return x.id===id;})[0]; if(!s)return; setCfg(Object.assign({},s.cfg)); fireToast('Plantilla aplicada'); }
   function quitarSaved(id){ state.saved=state.saved.filter(function(x){return x.id!==id;}); try{localStorage.setItem('gm_report_configs',JSON.stringify(state.saved));}catch(e){} render(); }
 
-  // Chat: parser local (entiende «pon los colores en azul», «cambia la tipografía a serif», «oculta la tabla»…)
-  function localParse(text){
-    var t=text.toLowerCase(), patch={}, done=[];
-    var cmap={rojo:'#e11835',azul:'#2a6fdb',verde:'#1f8a5b',grafito:'#3b4250',gris:'#3b4250',indigo:'#5b53d6','índigo':'#5b53d6',morado:'#5b53d6',ambar:'#d9822b','ámbar':'#d9822b',naranja:'#d9822b',negro:'#0e1420'};
-    Object.keys(cmap).forEach(function(k){ if(t.indexOf(k)>=0){patch.primary=cmap[k];done.push('color principal');} });
-    if(t.indexOf('serif')>=0||t.indexOf('newsreader')>=0){patch.font="'Newsreader',Georgia,serif";done.push('tipografía');}
-    if(t.indexOf('lora')>=0){patch.font="'Lora',Georgia,serif";done.push('tipografía');}
-    if(t.indexOf('jakarta')>=0||t.indexOf('moderna')>=0){patch.font="'Plus Jakarta Sans',sans-serif";done.push('tipografía');}
-    if(t.indexOf('plex')>=0){patch.font="'IBM Plex Sans',system-ui,sans-serif";done.push('tipografía');}
-    if(t.indexOf('oculta')>=0||t.indexOf('quita')>=0||t.indexOf('esconde')>=0){
-      if(t.indexOf('tabla')>=0){patch.showTable=false;done.push('tabla');}
-      if(t.indexOf('kpi')>=0||t.indexOf('resultados clave')>=0){patch.showKpis=false;done.push('KPIs');}
-      if(t.indexOf('nota')>=0){patch.showNote=false;done.push('nota');}
-    }
-    if(t.indexOf('muestra')>=0||t.indexOf('activa')>=0||t.indexOf('añade')>=0||t.indexOf('anade')>=0){
-      if(t.indexOf('tabla')>=0){patch.showTable=true;done.push('tabla');}
-      if(t.indexOf('kpi')>=0){patch.showKpis=true;done.push('KPIs');}
-      if(t.indexOf('nota')>=0){patch.showNote=true;done.push('nota');}
-    }
+  // Chat: parser local ampliado — interpreta casi cualquier ajuste del informe en lenguaje natural.
+  var COLORS={
+    'rojo':'#e11835','roja':'#e11835','carmesí':'#e11835','carmesi':'#e11835',
+    'azul':'#2a6fdb','añil':'#2a6fdb','anil':'#2a6fdb','celeste':'#2a6fdb',
+    'verde':'#1f8a5b',
+    'grafito':'#3b4250','gris':'#3b4250','plomo':'#3b4250',
+    'indigo':'#5b53d6','índigo':'#5b53d6',
+    'morado':'#7c3aed','púrpura':'#7c3aed','purpura':'#7c3aed','violeta':'#7c3aed','lila':'#7c3aed',
+    'ámbar':'#d9822b','ambar':'#d9822b','naranja':'#d9822b',
+    'amarillo':'#d4a017','dorado':'#c9a227','oro':'#c9a227',
+    'turquesa':'#0d9488','teal':'#0d9488','cian':'#0891b2',
+    'rosa':'#db2777','fucsia':'#db2777','magenta':'#c026d3',
+    'marrón':'#6b4423','marron':'#6b4423','café':'#6b4423','cafe':'#6b4423',
+    'negro':'#0e1420'
+  };
+  var HELP='Esto es lo que puedo cambiar:\n'
+    +'• Textos: «título: Informe anual 2025», «cliente Acme S.L.», «empresa Gestiona Asesores», «periodo ejercicio 2024».\n'
+    +'• Color principal: «pon los colores en azul», «usa #0d9488».\n'
+    +'• Acento/texto: «el acento en negro».\n'
+    +'• Paleta completa: «usa la paleta verde».\n'
+    +'• Tipografía: «tipografía serif», «Lora», «IBM Plex», «moderna».\n'
+    +'• Secciones: «oculta la tabla», «muestra los KPIs», «añade la nota», «muestra todo».\n'
+    +'• Logo: «quita el logo» (para añadirlo usa el botón «Subir logo»).\n'
+    +'• Estilo: «hazlo más formal», «más moderno».\n'
+    +'• «restablece todo» para volver a los valores por defecto.';
+
+  function hasWord(s,w){ try{ return new RegExp('(^|[^0-9a-záéíóúñü])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^0-9a-záéíóúñü]|$)','i').test(s); }catch(e){ return s.indexOf(w)>=0; } }
+  function normHex(h){ h=(h||'').replace('#',''); if(h.length===3){h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);} return '#'+h.toLowerCase(); }
+  function accentFor(hex){ for(var i=0;i<PALETTES.length;i++){ if(PALETTES[i].primary.toLowerCase()===hex){ return PALETTES[i].accent; } } return darken(hex,0.78); }
+  function cleanVal(s){
+    s=(s||'').split(/\s*[;\n]\s*/)[0];
+    s=s.replace(/^\s*[:=»«]\s*/,'')
+       .replace(/^\s*(?:se\s+llamar[áa]|se\s+llama|se\s+titula|llamad[oa]|como|al|a|en|de|es|sea|ser[áa])\s+/i,'')
+       .replace(/^["“«'‘’\s]+/,'').replace(/["”»'’\s]+$/,'').trim();
+    s=s.replace(/([^A-ZÁÉÍÓÚÑ.])\.$/,'$1');  // quita el punto final de frase, pero conserva abreviaturas tipo «S.L.»
+    return s;
+  }
+  function fieldVal(orig, triggerRe){
+    var m=triggerRe.exec(orig); if(!m) return null;
+    var v=cleanVal(orig.slice(m.index+m[0].length));
+    return (v && v.length>0 && v.length<140) ? v : null;
+  }
+  function applyAnd(patch,done,note){
     if(Object.keys(patch).length){ Object.assign(state.cfg,patch); persist(); }
-    return done;
+    return {done:done, note:note||null};
+  }
+
+  function localParse(text){
+    var orig=text, t=text.toLowerCase(), patch={}, done=[];
+
+    // Comandos especiales -------------------------------------------------
+    if(/\b(ayuda|opciones|comandos|qu[eé]\s+(?:puedes|sabes)\s+hacer|qu[eé]\s+haces)\b/.test(t)){ return {done:[], note:HELP}; }
+    if(/\b(reinicia(?:r)?|restablece(?:r)?|resetea(?:r)?|reset|de\s+cero|por\s+defecto|valores\s+por\s+defecto|empieza\s+de\s+nuevo)\b/.test(t)){
+      Object.assign(state.cfg, JSON.parse(JSON.stringify(DEFAULTS))); persist();
+      return {done:[], note:'Listo, he restablecido el informe a los valores por defecto.'};
+    }
+
+    var scan=t;
+    // Campos de texto -----------------------------------------------------
+    var comp=fieldVal(orig, /\b(?:empresa|compañ[íi]a|compania|marca)\b/i);
+    if(comp){ patch.companyName=comp; done.push('el nombre de la empresa'); scan=scan.replace(comp.toLowerCase(),' '); }
+    var titl=fieldVal(orig, /\b(?:t[íi]tulo(?:\s+del\s+informe)?|titula(?:r)?|el\s+informe\s+se\s+(?:llama|titula))\b/i);
+    if(titl){ patch.reportTitle=titl; done.push('el título'); scan=scan.replace(titl.toLowerCase(),' '); }
+    var cli=fieldVal(orig, /\b(?:cliente|preparado\s+para|destinatario)\b/i);
+    if(cli){ patch.clientName=cli; done.push('el cliente'); scan=scan.replace(cli.toLowerCase(),' '); }
+    var mp=/\b(ejercicio|per[íi]odo|periodo|a[ñn]o)\b\s*[:=]?\s*([^\n;,.]+)?/i.exec(orig);
+    if(mp && mp[2]){
+      var pv=cleanVal(mp[2]);
+      if(pv){
+        if(/^\d/.test(pv)){ pv=(/^a[ñn]o$/i.test(mp[1])?'Año ':'Ejercicio ')+pv; }
+        else { pv=pv.charAt(0).toUpperCase()+pv.slice(1); }
+        patch.period=pv; done.push('el periodo'); scan=scan.replace((mp[2]||'').toLowerCase(),' ');
+      }
+    }
+
+    // Presets de estilo ---------------------------------------------------
+    if(/m[áa]s\s+(?:formal|eleg|serio|sobri)|editorial/.test(scan)){ patch.font="'Newsreader',Georgia,serif"; if(patch.primary==null)patch.primary='#3b4250'; patch.accent='#111318'; done.push('un estilo más formal'); }
+    if(/m[áa]s\s+(?:modern|fresco|tech)/.test(scan)){ patch.font="'Plus Jakarta Sans',sans-serif"; done.push('un estilo más moderno'); }
+
+    // Tipografía ----------------------------------------------------------
+    if(/newsreader/.test(scan) || (hasWord(scan,'serif') && !/sans[- ]?serif/.test(scan))){ if(patch.font==null||done.indexOf('un estilo más formal')<0){ patch.font="'Newsreader',Georgia,serif"; } if(done.indexOf('la tipografía')<0 && done.indexOf('un estilo más formal')<0)done.push('la tipografía'); }
+    else if(hasWord(scan,'lora')){ patch.font="'Lora',Georgia,serif"; done.push('la tipografía'); }
+    else if(/plex|neutra/.test(scan)){ patch.font="'IBM Plex Sans',system-ui,sans-serif"; done.push('la tipografía'); }
+    else if(/jakarta|moderna/.test(scan) || hasWord(scan,'sans')){ if(patch.font==null){ patch.font="'Plus Jakarta Sans',sans-serif"; done.push('la tipografía'); } }
+
+    // Color ---------------------------------------------------------------
+    var hexM=orig.match(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/);
+    var colHex=null;
+    if(hexM){ colHex=normHex(hexM[0]); }
+    else { for(var kc in COLORS){ if(hasWord(scan,kc)){ colHex=COLORS[kc]; break; } } }
+    if(colHex){
+      var isPalette=/\bpaleta\b/.test(scan);
+      var toAccent=/\b(acento|texto|secundario)\b/.test(scan);
+      var toBoth=/\bcolor(?:es)?\b/.test(scan) && /\b(todo|todos|ambos|general)\b/.test(scan);
+      if(isPalette){ patch.primary=colHex; patch.accent=accentFor(colHex); done.push('la paleta de color'); }
+      else if(toBoth){ patch.primary=colHex; patch.accent=colHex; done.push('los colores principal y de acento'); }
+      else if(toAccent){ patch.accent=colHex; done.push('el color de acento'); }
+      else { patch.primary=colHex; done.push('el color principal'); }
+    }
+
+    // Secciones (mostrar / ocultar) --------------------------------------
+    var show=/\b(muestra|mostrar|activa(?:r)?|a[ñn]ade|anade|incluye|incluir|ense[ñn]a|pon(?:er|ga)?)\b/.test(scan);
+    var hide=/\b(oculta(?:r)?|quita(?:r)?|esconde(?:r)?|elimina(?:r)?|borra(?:r)?|sin|no\s+(?:muestres|incluyas|quiero))\b/.test(scan);
+    var val = (hide && !show) ? false : (show ? true : null);
+    if(val!==null){
+      if(/\b(todo|todas)\b/.test(scan) && !hasWord(scan,'logo')){ patch.showTable=patch.showKpis=patch.showNote=val; done.push('todas las secciones ('+(val?'visibles':'ocultas')+')'); }
+      else {
+        if(/\btabla\b|facturas\s+sin\s+pago/.test(scan)){ patch.showTable=val; done.push('la tabla ('+(val?'visible':'oculta')+')'); }
+        if(/\bkpi|resultados\s+clave|m[ée]tricas\b/.test(scan)){ patch.showKpis=val; done.push('los KPIs ('+(val?'visibles':'ocultos')+')'); }
+        if(/\bnota|metodol[óo]gica\b/.test(scan)){ patch.showNote=val; done.push('la nota ('+(val?'visible':'oculta')+')'); }
+      }
+    }
+
+    // Logo ----------------------------------------------------------------
+    if(hasWord(scan,'logo')){
+      if(hide && !show){ if(state.cfg.logo!==null){ patch.logo=null; done.push('el logo (eliminado)'); } }
+      else if(show){ return applyAnd(patch,done,'Para añadir un logo usa el botón «Subir logo» del panel Diseño (no puedo subir imágenes desde el chat).'); }
+    }
+
+    return applyAnd(patch,done,null);
+  }
+  function listar(a){ return a.length<=1 ? (a[0]||'') : a.slice(0,-1).join(', ')+' y '+a[a.length-1]; }
+  function scrollChat(){ var l=document.getElementById('gm-chat-log'); if(l)l.scrollTop=l.scrollHeight; }
+  function applyRemote(data){
+    var patch=data.patch||{};
+    if(Object.keys(patch).length){ Object.assign(state.cfg,patch); persist(); }
+    state.thinking=false;
+    state.messages.push({role:'bot',text:(data.reply||'Hecho.')});
+    render(); scrollChat();
+  }
+  // Respaldo offline: parser local (si no hay API o falla la red).
+  function finishLocal(text){
+    var res=localParse(text);
+    state.thinking=false;
+    var reply;
+    if(res.done.length){ reply='Hecho ✓ He actualizado '+listar(res.done)+'.'+(res.note?(' '+res.note):''); }
+    else if(res.note){ reply=res.note; }
+    else { reply='No he identificado el cambio. Escribe «ayuda» para ver lo que puedo hacer, o prueba «título: Informe 2025», «colores en azul» u «oculta la tabla».'; }
+    state.messages.push({role:'bot',text:reply});
+    render(); scrollChat();
   }
   function sendChat(){
     var input=document.getElementById('gm-chat-input');
@@ -117,13 +238,17 @@
     if(input)input.value='';
     state.messages.push({role:'user',text:text});
     state.thinking=true; render();
-    setTimeout(function(){
-      var done=localParse(text);
-      state.thinking=false;
-      state.messages.push({role:'bot',text: done.length?('Hecho, he actualizado '+done.join(', ')+'.'):'No he identificado un cambio claro. Prueba con «pon los colores en azul» o «cambia la tipografía a serif».'});
-      render();
-      var l=document.getElementById('gm-chat-log'); if(l)l.scrollTop=l.scrollHeight;
-    }, 620);
+    var c=state.cfg;
+    var payload={ message:text, cfg:{
+      companyName:c.companyName, reportTitle:c.reportTitle, clientName:c.clientName,
+      period:c.period, font:c.font, primary:c.primary, accent:c.accent,
+      showTable:c.showTable, showKpis:c.showKpis, showNote:c.showNote,
+      pageBg:c.pageBg, css:c.css } };
+    fetch('/api/informe/chat',{ method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload) })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(data){ if(data && data.ok){ applyRemote(data); } else { finishLocal(text); } })
+      .catch(function(){ finishLocal(text); });
   }
 
   function pickLogo(){ var i=document.getElementById('gm-logo-input'); if(i)i.click(); }
@@ -169,7 +294,7 @@
   }
 
   function view(v){
-    var page1='<div style="width:720px;min-height:1018px;background:#fff;border-radius:6px;box-shadow:0 20px 50px -24px rgba(14,20,32,.35),0 2px 8px rgba(14,20,32,.08);overflow:hidden;font-family:var(--gm-font);animation:gmPop .4s ease both;display:flex;flex-direction:column">'
+    var page1='<div class="gm-page" style="width:720px;min-height:1018px;background:var(--gm-page-bg);border-radius:6px;box-shadow:0 20px 50px -24px rgba(14,20,32,.35),0 2px 8px rgba(14,20,32,.08);overflow:hidden;font-family:var(--gm-font);animation:gmPop .4s ease both;display:flex;flex-direction:column">'
       +'<div style="height:10px;background:linear-gradient(90deg,var(--gm-primary),var(--gm-primary-d))"></div>'
       +'<div style="padding:64px 64px 0;display:flex;align-items:center;justify-content:space-between">'+logoBlock(v,true)
       +'<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:.12em;color:#8a94a6;text-transform:uppercase">Informe confidencial</div></div>'
@@ -200,22 +325,27 @@
 
     var note = v.showNote ? '<div style="border-left:3px solid var(--gm-primary);background:var(--gm-soft);border-radius:0 10px 10px 0;padding:16px 20px"><div style="font-weight:700;font-size:13px;color:var(--gm-accent);margin-bottom:5px">Nota metodológica</div><div style="font-size:12.5px;line-height:1.6;color:#5a6472">Motor determinista: se afirma únicamente lo que puede probarse con la evidencia del Libro Mayor. Los casos dudosos se marcan para revisión humana.</div></div>' : '';
 
-    var page2='<div style="width:720px;min-height:1018px;background:#fff;border-radius:6px;box-shadow:0 20px 50px -24px rgba(14,20,32,.35),0 2px 8px rgba(14,20,32,.08);overflow:hidden;font-family:var(--gm-font);animation:gmPop .4s ease .05s both;display:flex;flex-direction:column">'
+    var page2='<div class="gm-page" style="width:720px;min-height:1018px;background:var(--gm-page-bg);border-radius:6px;box-shadow:0 20px 50px -24px rgba(14,20,32,.35),0 2px 8px rgba(14,20,32,.08);overflow:hidden;font-family:var(--gm-font);animation:gmPop .4s ease .05s both;display:flex;flex-direction:column">'
       +'<div style="padding:38px 56px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eef1f6"><div style="display:flex;align-items:center;gap:10px">'+logoBlock(v,false)+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:10.5px;letter-spacing:.1em;color:#8a94a6;text-transform:uppercase">Resumen ejecutivo</div></div>'
       +'<div style="flex:1;padding:34px 56px">'+kpis+table+note+'</div>'
       +'<div style="padding:16px 56px;background:#fafbfc;border-top:1px solid #eef1f6;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#8a94a6"><span><span id="pvCoF2">'+esc(v.companyName)+'</span> · <span id="pvPerF2">'+esc(v.period)+'</span></span><span style="font-family:\'JetBrains Mono\',monospace">02 / 02</span></div></div>';
 
-    var chatLog = v.messages.length ? '<div id="gm-chat-log" style="max-height:132px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding:2px 2px 0">'
-      +v.messages.map(function(m){ return '<div style="align-self:'+m.align+';max-width:78%;background:'+m.bg+';color:'+m.color+';border:'+m.border+';font-size:13px;line-height:1.5;padding:9px 13px;border-radius:'+m.radius+';animation:gmUp .25s ease both">'+esc(m.text)+'</div>'; }).join('')
+    var chatLog='<div id="gm-chat-log" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:16px 16px 8px">'
+      +v.messages.map(function(m){ return '<div style="align-self:'+m.align+';max-width:88%;background:'+m.bg+';color:'+m.color+';border:'+m.border+';font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;padding:9px 13px;border-radius:'+m.radius+';animation:gmUp .25s ease both">'+esc(m.text)+'</div>'; }).join('')
       +(v.thinking?'<div style="align-self:flex-start;background:#f4f6fa;border:1px solid #eef1f6;padding:11px 14px;border-radius:13px 13px 13px 4px;display:flex;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#8a94a6;animation:gmDot 1.2s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:#8a94a6;animation:gmDot 1.2s .18s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:#8a94a6;animation:gmDot 1.2s .36s infinite"></span></div>':'')
-      +'</div>' : '';
+      +'</div>';
 
-    var chat='<div style="flex:none;border-top:1px solid #e2e6ee;background:#fff;padding:12px 22px 14px"><div style="max-width:820px;margin:0 auto">'+chatLog
-      +'<div style="display:flex;align-items:center;gap:10px;background:#f4f6fa;border:1px solid #e2e6ee;border-radius:13px;padding:7px 8px 7px 16px">'
-      +'<div style="flex:none;width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#e11835,#b3122a);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.6 3.6L13 6.4l-2.8 2.3.8 3.8L8 10.8 5 12.5l.8-3.8L3 6.4l3.4-1.3L8 1.5z" fill="#fff"/></svg></div>'
-      +'<input id="gm-chat-input" type="text" onkeydown="RE.chatKey(event)" placeholder="Pide un cambio: «pon los colores en azul», «cambia la tipografía a serif», «oculta la tabla»…" style="flex:1;border:none;background:none;outline:none;font-size:14px;padding:6px 0">'
-      +'<button onclick="RE.sendChat()" style="flex:none;border:none;background:#e11835;color:#fff;width:36px;height:36px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 8h10M8 3.5L12.5 8 8 12.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
-      +'</div></div></div>';
+    var chatInput='<div style="flex:none;padding:12px 14px 14px;border-top:1px solid #eef1f6;background:#fff">'
+      +'<div style="display:flex;align-items:center;gap:8px;background:#f4f6fa;border:1px solid #e2e6ee;border-radius:13px;padding:6px 6px 6px 14px">'
+      +'<input id="gm-chat-input" type="text" onkeydown="RE.chatKey(event)" placeholder="Escribe un cambio… «pon el título en Cuentas 2024»" style="flex:1;border:none;background:none;outline:none;font-size:13.5px;padding:6px 0">'
+      +'<button onclick="RE.sendChat()" style="flex:none;border:none;background:#e11835;color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 8h10M8 3.5L12.5 8 8 12.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+      +'</div><div style="font-size:10.5px;color:#aab2c0;margin-top:8px;text-align:center">Escribe «ayuda» para ver todo lo que puedo cambiar</div></div>';
+
+    var chatSidebar='<div style="flex:none;width:340px;background:#fff;border-right:1px solid #e2e6ee;display:flex;flex-direction:column;min-height:0">'
+      +'<div style="flex:none;padding:15px 18px;border-bottom:1px solid #eef1f6;display:flex;align-items:center;gap:11px">'
+      +'<div style="flex:none;width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#e11835,#b3122a);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.6 3.6L13 6.4l-2.8 2.3.8 3.8L8 10.8 5 12.5l.8-3.8L3 6.4l3.4-1.3L8 1.5z" fill="#fff"/></svg></div>'
+      +'<div><div style="font-weight:800;font-size:14px;letter-spacing:-.01em;line-height:1.15">Asistente</div><div style="font-size:11px;color:#8a94a6;line-height:1.15">Pide cambios en lenguaje natural</div></div></div>'
+      +chatLog+chatInput+'</div>';
 
     var topbar='<div style="flex:none;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#fff;border-bottom:1px solid #e2e6ee;z-index:30">'
       +'<div style="display:flex;align-items:center;gap:16px"><a href="/app" onclick="RE._back(event)" style="display:flex;align-items:center;gap:8px;color:#48546a;font-weight:600;font-size:13.5px"><span style="font-size:17px;line-height:1">‹</span>Volver</a>'
@@ -226,7 +356,7 @@
       +'<button onclick="RE.save()" style="border:1px solid #e0e5ec;background:#fff;font-weight:600;font-size:13px;color:#0e1420;padding:9px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3h8l2 2v8H3V3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 3v3h4V3M5.5 13v-3.5h5V13" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guardar configuración</button>'
       +'<button onclick="RE.exportPdf()" style="border:none;background:#e11835;color:#fff;font-weight:700;font-size:13px;padding:10px 18px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 10px 20px -10px rgba(225,24,53,.6)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M8 9L5 6M8 9l3-3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11v2h10v-2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>Exportar PDF</button></div></div>';
 
-    var canvas='<div style="flex:1;display:flex;flex-direction:column;min-width:0"><div style="flex:1;overflow:auto;padding:34px 34px 40px;display:flex;flex-direction:column;align-items:center;gap:26px">'+page1+page2+'</div>'+chat+'</div>';
+    var canvas='<div style="flex:1;min-width:0;overflow:auto;padding:34px 34px 40px;display:flex;flex-direction:column;align-items:center;gap:26px">'+page1+page2+'</div>';
 
     var sidebar='<div style="flex:none;width:320px;background:#fff;border-left:1px solid #e2e6ee;display:flex;flex-direction:column;min-height:0">'
       +'<div style="flex:none;display:flex;padding:12px 14px 0;gap:4px;border-bottom:1px solid #eef1f6">'
@@ -235,7 +365,8 @@
 
     var toast = v.showToast ? '<div style="position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#0e1420;color:#fff;font-size:13px;font-weight:600;padding:11px 20px;border-radius:11px;box-shadow:0 16px 34px -12px rgba(14,20,32,.5);z-index:60;animation:gmToast 2.4s ease both;display:flex;align-items:center;gap:9px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3L13 4.5" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'+esc(v.toastText)+'</div>' : '';
 
-    return topbar+'<div style="flex:1;display:flex;min-height:0">'+canvas+sidebar+'</div>'+toast;
+    var custom='<style id="gm-custom">'+(v.css||'')+'</style>';
+    return topbar+'<div style="flex:1;display:flex;min-height:0">'+chatSidebar+canvas+sidebar+'</div>'+toast+custom;
   }
 
   function kpiCard(lbl,n,sub,top,subcol){
@@ -308,6 +439,7 @@
       hasLogo:!!c.logo, logoSrc:c.logo||'', showKpis:c.showKpis, showTable:c.showTable, showNote:c.showNote,
       sideTab:state.sideTab, isDesign:state.sideTab==='design', isSaved:state.sideTab==='saved',
       savedBadge:state.saved.length?('('+state.saved.length+')'):'', saved:state.saved,
+      css:String(c.css||'').replace(/<\/?(style|script)/gi,' '),
       messages:msgs, thinking:state.thinking, showToast:!!state.toast, toastText:state.toast };
   }
   function render(){
@@ -323,6 +455,7 @@
   // init
   try{ var cur=localStorage.getItem('gm_report_current'); if(cur) Object.assign(state.cfg, JSON.parse(cur)); }catch(e){}
   try{ var sv=localStorage.getItem('gm_report_configs'); if(sv) state.saved=JSON.parse(sv); }catch(e){}
+  if(!state.messages.length){ state.messages.push({role:'bot',text:'Hola 👋 Soy tu asistente. Dime en lenguaje natural prácticamente cualquier cambio del informe —el fondo, los colores, la tipografía, el título, el cliente, tamaños, márgenes, qué secciones mostrar…— y lo aplico al momento.'}); }
   render();
 })();
 </script>

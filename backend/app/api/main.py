@@ -21,6 +21,7 @@ from ..domain.resultados import Informe
 from ..persistence.store import OverrideStore
 from ..reporting.excel_export import exportar_excel
 from ..reporting.pdf_export import exportar_pdf, exportar_pdf_facturas
+from ..reporting.report_chat import SinClaveAPI, interpretar as interpretar_chat
 from ..reporting.serializar import (
     conciliacion_banco_a_dict,
     informe_a_dict,
@@ -33,6 +34,7 @@ from ..service import (
     conciliar_banco,
     parsear,
     parsear_extracto_banco,
+    revisar_con_ia,
 )
 
 app = FastAPI(title="Detección de pagos sin factura", version="1.0",
@@ -75,6 +77,28 @@ def index() -> HTMLResponse:
 def editor_informe() -> HTMLResponse:
     """Editor de informe de cliente (protegido por login)."""
     return HTMLResponse((_STATIC / "informe.html").read_text(encoding="utf-8"))
+
+
+class ChatInformeIn(BaseModel):
+    message: str
+    cfg: dict = {}
+
+
+@app.post("/api/informe/chat")
+def informe_chat(body: ChatInformeIn) -> JSONResponse:
+    """Interpreta una petición del asistente del editor con el modelo de chat
+    (OpenAI) y devuelve un patch de configuración. Si no hay clave de API o
+    falla, responde ok:false para que el frontend use su parser local de respaldo."""
+    mensaje = (body.message or "").strip()
+    if not mensaje:
+        return JSONResponse({"ok": False, "reason": "vacio"})
+    try:
+        resultado = interpretar_chat(mensaje, body.cfg or {})
+    except SinClaveAPI:
+        return JSONResponse({"ok": False, "reason": "sin_api"})
+    except Exception as e:  # cuota, red, respuesta no válida… -> respaldo local
+        return JSONResponse({"ok": False, "reason": "error", "detail": str(e)[:200]})
+    return JSONResponse({"ok": True, **resultado})
 
 
 async def _volcar_temporal(archivo: UploadFile) -> str:
@@ -130,6 +154,60 @@ async def analizar(
     if aviso_banco:
         payload["aviso_banco"] = aviso_banco
     return JSONResponse(payload)
+
+
+def _sugerencia_a_dict(s) -> dict:
+    return {
+        "codigo_cuenta": s.codigo_cuenta,
+        "veredicto": s.veredicto,
+        "subcategoria": s.subcategoria,
+        "antiguedad_dias": s.antiguedad_dias,
+        "reciente_sin_alarma": s.reciente_sin_alarma,
+        "motivo": s.motivo,
+        "confianza": s.confianza,
+        "dar_por_bueno": s.dar_por_bueno,
+    }
+
+
+def _reparo_a_dict(r) -> dict:
+    return {
+        "codigo_cuenta": r.codigo_cuenta,
+        "clasificacion_motor": r.clasificacion_motor,
+        "duda": r.duda,
+        "confianza": r.confianza,
+    }
+
+
+@app.post("/api/informe/{huella}/revisar-ia")
+def revisar_ia(huella: str) -> JSONResponse:
+    """Segunda opinión de Claude sobre un análisis ya hecho (bajo demanda).
+
+    NO reclasifica nada: el motor determinista sigue siendo la fuente de verdad.
+    Devuelve, por cada uno de los dos análisis (pagos sin factura / facturas sin
+    pago):
+      - `profundo`: razonamiento por cuenta sobre las que están en REVISAR.
+      - `reparos` : cuentas ya decididas donde el razonador discrepa del motor.
+
+    Sin ANTHROPIC_API_KEY responde `activo: false` y el frontend no muestra nada.
+    """
+    informe = _informes.get(huella)
+    if informe is None:
+        raise HTTPException(404, "Análisis no encontrado (vuelve a subir el fichero).")
+    resultado = revisar_con_ia(informe, _informes_fsp.get(huella))
+    if not resultado.get("activo"):
+        return JSONResponse({"activo": False, "motivo": "sin_api"})
+
+    analisis = {
+        nombre: {
+            "profundo": [_sugerencia_a_dict(s) for s in bloque["profundo"].values()],
+            "reparos": [_reparo_a_dict(r) for r in bloque["reparos"]],
+        }
+        for nombre, bloque in resultado["analisis"].items()
+    }
+    total = sum(
+        len(b["profundo"]) + len(b["reparos"]) for b in analisis.values()
+    )
+    return JSONResponse({"activo": True, "analisis": analisis, "total": total})
 
 
 @app.get("/api/informe/{huella}/conciliacion")
